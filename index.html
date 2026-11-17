@@ -68,6 +68,12 @@ a{color:var(--pl)}
 .side,.shell.col .side{display:flex;position:fixed;top:0;left:0;bottom:0;width:min(280px,84vw);z-index:200;transform:translateX(-100%);transition:transform .25s;padding-top:env(safe-area-inset-top)}
 .side.open{transform:none}.ovl.on{display:block;position:fixed;inset:0;background:#0007;z-index:150}}
 @media(max-width:480px){.un{display:none}}
+.pal{display:flex;flex-wrap:wrap;gap:8px}
+.sw{display:flex;align-items:center;gap:8px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);border-radius:10px;padding:8px 12px}
+.sw.on{border-color:var(--pl);outline:2px solid var(--pl)}
+.sw span{width:16px;height:16px;border-radius:50%;margin-right:-4px;border:1px solid #0003}
+.lg{display:block;max-height:64px;max-width:200px;margin:6px 0 10px;border-radius:8px;background:#fff}
+.avl{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none}
 </style>
 </head>
 <body>
@@ -106,6 +112,28 @@ const cmpA=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
 const endT=(t,h)=>{const m=(+t.slice(0,2))*60+(+t.slice(3,5))+Math.round(h*60);return p2(Math.floor(m/60)%24)+':'+p2(m%60)};
 const nextDate=(d,f)=>{const x=new Date(d+'T12:00');if(f==='Semanal')x.setDate(x.getDate()+7);else if(f==='Quinzenal')x.setDate(x.getDate()+14);else if(f==='Mensal')x.setMonth(x.getMonth()+1);else return null;return ymd(x)};
 const ERR={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-email':'E-mail inválido.','auth/email-already-in-use':'Este e-mail já está cadastrado. Use "Entrar".','auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.','auth/too-many-requests':'Muitas tentativas. Tente novamente em alguns minutos.'};
+
+const ls=(k,v)=>{try{return v===undefined?localStorage.getItem(k):localStorage.setItem(k,v)}catch(e){return null}};
+const SV='<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">';
+const SUN=SV+'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',MOON=SV+'<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+const PAL={
+ ameixa:{n:'Ameixa',p:'#6b2a6f',p2:'#4d1e51',k:'#d79bb4',t:'#7aa5b8',L:['#f7f2f8','#ffffff','#e5dbe7','#2a2030','#6f6577','#6b2a6f'],D:['#171119','#221a25','#3a2d3e','#f1eaf3','#a99bb0','#e3adc6']},
+ oceano:{n:'Oceano',p:'#155e86',p2:'#0f4565',k:'#6cc3d5',t:'#8fb8d6',L:['#eef5f9','#ffffff','#d6e4ec','#14232d','#5b6f7c','#155e86'],D:['#0e1820','#16232d','#263a47','#e8f1f6','#93a9b7','#7cc4e0']},
+ esmeralda:{n:'Esmeralda',p:'#1f7a54',p2:'#165a3e',k:'#8fd1ae',t:'#7fb7a0',L:['#eff7f3','#ffffff','#d5e6dd','#14251d','#5a6f64','#1f7a54'],D:['#0f1a15','#17251e','#2a4034','#e8f3ed','#93aa9d','#7fd1a6']},
+ rosa:{n:'Rosa',p:'#b0376f',p2:'#85274f',k:'#f0a6c5',t:'#c9a0b8',L:['#fbf1f5','#ffffff','#efd9e2','#2d1822','#7a6270','#b0376f'],D:['#1a1015','#26171e','#432a36','#f6e9ef','#b79aa8','#f0a6c5']},
+ sol:{n:'Pôr do sol',p:'#c4570f',p2:'#963f08',k:'#f5b971',t:'#d9a574',L:['#fbf4ec','#ffffff','#efdfcc','#2c2015','#7a6a58','#c4570f'],D:['#1a130c','#261c12','#45331f','#f6ede2','#b9a58c','#f5b971']},
+ grafite:{n:'Grafite',p:'#3f4a5c',p2:'#2d3645',k:'#9fb3c8',t:'#8aa0b5',L:['#f2f4f7','#ffffff','#dde2e9','#1d232c','#5f6b7a','#3f4a5c'],D:['#101317','#181d23','#2b333d','#e9edf2','#98a3b1','#9fb3c8']}};
+let MODE=ls('gm')||'auto',PALK=ls('gp')||'ameixa';
+const isDark=()=>MODE==='dark'||(MODE==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);
+function applyTheme(){const P=PAL[PALK]||PAL.ameixa,d=isDark(),c=d?P.D:P.L,r=document.documentElement.style;
+ [['--p',P.p],['--p2',P.p2],['--k',P.k],['--t',P.t],['--bg',c[0]],['--card',c[1]],['--bd',c[2]],['--tx',c[3]],['--mu',c[4]],['--pl',c[5]],['--ok',d?'#5cc58a':'#2e7d4f'],['--er',d?'#ff8a7a':'#b83a2e']].forEach(([k,v])=>r.setProperty(k,v));r.colorScheme=d?'dark':'light'}
+function persistTheme(){ls('gm',MODE);ls('gp',PALK);applyTheme();
+ const i=$('#tmi');if(i)i.innerHTML=isDark()?SUN:MOON;
+ document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.k===PALK));const t=$('#tsel');if(t)t.value=MODE;
+ if(U){CO={...CO,mode:MODE,palette:PALK};db.doc('companies/'+U.uid).set({mode:MODE,palette:PALK},{merge:true}).catch(x=>toast(x.message))}}
+const toggleMode=()=>{MODE=isDark()?'light':'dark';persistTheme()};
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(MODE==='auto'){applyTheme();const i=$('#tmi');if(i)i.innerHTML=isDark()?SUN:MOON}});
+applyTheme();
 
 /* ---------- Esquemas dos formulários ---------- */
 const DUR=[];for(let h=1;h<=10;h+=.5)DUR.push([h,h+'h']);
@@ -158,8 +186,8 @@ const Rp=n=>R(n).replace(/\u00a0/g,' ');
 function expXLS(){const r=txM().map(x=>({Data:dbr(x.date),Tipo:x.type==='receita'?'Receita':'Despesa','Descrição':x.desc,Valor:x.amount}));
  const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r),'Financeiro');XLSX.writeFile(wb,`financeiro-${mon}.xlsx`)}
 function expPDF(){const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa'),pdf=new jspdf.jsPDF();
- pdf.setFontSize(14);pdf.text(`${CO.name} - Financeiro ${mon.split('-').reverse().join('/')}`,14,16);
- pdf.autoTable({startY:22,head:[['Data','Tipo','Descricao','Valor']],body:t.map(x=>[dbr(x.date),x.type==='receita'?'Receita':'Despesa',x.desc,Rp(x.amount)]),foot:[['','','Receitas',Rp(r)],['','','Despesas',Rp(d)],['','','Saldo',Rp(r-d)]],headStyles:{fillColor:[107,42,111]},footStyles:{fillColor:[230,220,232],textColor:30}});
+ const y0=pdfHead(pdf,'Financeiro '+mon.split('-').reverse().join('/'));
+ pdf.autoTable({startY:y0,head:[['Data','Tipo','Descricao','Valor']],body:t.map(x=>[dbr(x.date),x.type==='receita'?'Receita':'Despesa',x.desc,Rp(x.amount)]),foot:[['','','Receitas',Rp(r)],['','','Despesas',Rp(d)],['','','Saldo',Rp(r-d)]],headStyles:{fillColor:[107,42,111]},footStyles:{fillColor:[230,220,232],textColor:30}});
  pdf.save(`financeiro-${mon}.pdf`)}
 
 /* ---------- Telas ---------- */
@@ -178,7 +206,7 @@ const VIEW={
  services:()=>`<div class="bar"><h3>Tipos de serviço</h3><button class="btn" onclick="edit('services')">Novo tipo</button></div><section class="card">${D.services.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="row"><div><b>${esc(s.name)}</b><small>${s.dur}h &middot; ${R(s.price)}</small></div><div class="acts"><button onclick="edit('services','${s.id}')">Editar</button><button onclick="del('services','${s.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Cadastre os serviços que a empresa oferece, como limpeza de apartamento, estofados ou pós-obra.</p>'}</section>`,
  fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
   return`<div class="bar"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="btn" onclick="edit('tx')">Novo lançamento</button></div><div class="card"><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></div><div class="bar"><span class="mu">Exportar este mês</span><span class="acts"><button class="ghost" onclick="expPDF()">PDF</button><button class="ghost" onclick="expXLS()">Excel</button></span></div><section class="card">${t.map(x=>`<div class="row"><div><b>${esc(x.desc)}</b><small>${dbr(x.date)}</small></div><b class="${x.type}">${x.type==='despesa'?'-':'+'}${R(x.amount)}</b><div class="acts"><button onclick="del('tx','${x.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Sem lançamentos neste mês.</p>'}</section>`},
- company:()=>`<h3>Minha empresa</h3><form class="card" onsubmit="return saveCo(event)"><label>Nome da empresa<input name="name" required value="${esc(CO.name)}"></label><label>Segmento<select name="segment">${['Limpeza residencial','Outro'].map(s=>`<option ${s===CO.segment?'selected':''}>${s}</option>`).join('')}</select></label><label>Telefone<input name="phone" type="tel" value="${esc(CO.phone||'')}"></label><button class="btn">Salvar alterações</button></form><section class="card"><small class="mu">E-mail de login: ${esc(U.email)}<br>Administrador do portal: ${isAdmin?'sim':'não'}<br>ID da conta: ${U.uid}</small></section>`,
+ company:()=>`<h3>Minha empresa</h3><form class="card" onsubmit="return saveCo(event)"><label>Nome da empresa<input name="name" required value="${esc(CO.name)}"></label><label>Slogan<input name="slogan" maxlength="80" placeholder="Ex.: Sua casa em boas mãos" value="${esc(CO.slogan||'')}"></label><fieldset><legend>Logo</legend><img id="lgp" class="lg" alt="Logo" src="${esc(CO.logo||'')}" style="${CO.logo?'':'display:none'}"><input type="hidden" name="logo" value="${esc(CO.logo||'')}"><input type="hidden" name="logoR" value="${CO.logoR||''}"><input type="file" accept="image/*" onchange="logoPick(this)"><p class="mu" style="margin:6px 0">Aparece no menu e nos PDFs. Clique em Salvar alterações para guardar.</p><button type="button" class="ghost" onclick="logoDel(this)">Remover logo</button></fieldset><label>Segmento<select name="segment">${['Limpeza residencial','Outro'].map(s=>`<option ${s===CO.segment?'selected':''}>${s}</option>`).join('')}</select></label><label>Telefone<input name="phone" type="tel" value="${esc(CO.phone||'')}"></label><button class="btn">Salvar alterações</button></form><section class="card"><h3>Aparência</h3><label>Tema<select id="tsel" onchange="MODE=this.value;persistTheme()"><option value="auto" ${MODE==='auto'?'selected':''}>Automático (igual ao aparelho)</option><option value="light" ${MODE==='light'?'selected':''}>Claro</option><option value="dark" ${MODE==='dark'?'selected':''}>Escuro</option></select></label><div class="pal">${Object.entries(PAL).map(([k,v])=>`<button type="button" class="sw ${k===PALK?'on':''}" data-k="${k}" onclick="PALK='${k}';persistTheme()"><span style="background:${v.p}"></span><span style="background:${v.k}"></span>${v.n}</button>`).join('')}</div></section><section class="card"><small class="mu">E-mail de login: ${esc(U.email)}<br>Administrador do portal: ${isAdmin?'sim':'não'}<br>ID da conta: ${U.uid}</small></section>`,
  admin:()=>`<div class="bar"><h3>Mural do portal</h3><button class="btn" onclick="edit('ann')">Nova publicação</button></div><section class="card">${D.ann.map(a=>`<div class="row"><div><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><small>${esc(a.text)}</small></div><div class="acts"><button onclick="del('ann','${a.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhuma publicação.</p>'}</section><section class="card"><h3>Empresas cadastradas (${D.cos.length})</h3>${D.cos.map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.segment||'')} &middot; ${esc(c.email||'')}</small></div></div>`).join('')}</section>`
 };
 const TABS=[['home','Dashboard','📊'],['agenda','Agenda','📅'],['clients','Clientes','👥'],['employees','Equipe','🧹'],['services','Serviços','🧰'],['fin','Financeiro','💰'],['company','Minha empresa','🏢']];
@@ -199,8 +227,8 @@ async function sendDay(e,day){
  if(!L.length){toast('Nenhum atendimento neste dia'+(emp?' para '+emp.name:'')+'.');return false}
  const title='Agenda '+dbr(day)+(emp?' - '+emp.name:''),fname='agenda-'+day+(emp?'-'+emp.name.split(' ')[0]:'');
  let blob,ext;
- if(fmt==='pdf'){const p=new jspdf.jsPDF({orientation:'landscape'});p.setFontSize(14);p.text(CO.name+' - '+title,14,16);
-  p.autoTable({startY:22,head:[Object.keys(L[0])],body:L.map(r=>Object.values(r)),headStyles:{fillColor:[107,42,111]}});blob=p.output('blob');ext='pdf'}
+ if(fmt==='pdf'){const p=new jspdf.jsPDF({orientation:'landscape'});const y0=pdfHead(p,title);
+  p.autoTable({startY:y0,head:[Object.keys(L[0])],body:L.map(r=>Object.values(r)),headStyles:{fillColor:[107,42,111]}});blob=p.output('blob');ext='pdf'}
  else{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L),'Agenda');blob=new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});ext='xlsx'}
  const file=new File([blob],fname+'.'+ext,{type:blob.type}),txt=CO.name+' - '+title+'\n'+L.map(r=>r['Horário']+' '+r['Cliente']+' - '+r['Endereço']).join('\n');
  closeM();
@@ -217,8 +245,15 @@ const menu=v=>{mnu=v;render()};
 const toggleMenu=()=>{innerWidth<900?mnu=!mnu:sbc=!sbc;render()};
 const go=t=>{tab=t;mnu=false;render();const m=$('main');if(m)m.scrollTop=0};
 const hint=()=>(!isAdmin&&U.email===ADMIN_EMAIL)?`<div class="ann alerta"><b>Esta conta ainda não é Admin do portal</b><p>No Firestore, crie a coleção "admins" com um documento cujo ID seja exatamente:\n${U.uid}</p></div>`:'';
-async function saveCo(e){e.preventDefault();const f=new FormData(e.target),d={name:f.get('name').trim(),segment:f.get('segment'),phone:f.get('phone'),email:U.email};
+async function saveCo(e){e.preventDefault();const f=new FormData(e.target),d={name:f.get('name').trim(),slogan:f.get('slogan').trim(),logo:f.get('logo')||'',logoR:parseFloat(f.get('logoR'))||0,segment:f.get('segment'),phone:f.get('phone'),email:U.email};
  try{await db.doc('companies/'+U.uid).set(d,{merge:true});CO={...CO,...d};render();toast('Dados da empresa salvos.')}catch(x){toast(x.message)}return false}
+function logoPick(inp){const fl=inp.files[0];if(!fl)return;const r=new FileReader();
+ r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,256/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+  let u=c.toDataURL('image/png');if(u.length>250000)u=c.toDataURL('image/jpeg',.85);
+  const F=inp.form.elements;F.logo.value=u;F.logoR.value=c.width/c.height;const g=$('#lgp');g.src=u;g.style.display='block'};im.onerror=()=>toast('Não foi possível ler essa imagem.');im.src=r.result};r.readAsDataURL(fl)}
+function logoDel(b){const F=b.form.elements;F.logo.value='';F.logoR.value='';$('#lgp').style.display='none'}
+function pdfHead(p,t){let x=14;if(CO.logo){const h=12,w=h*(CO.logoR||1);try{p.addImage(CO.logo,CO.logo.startsWith('data:image/png')?'PNG':'JPEG',14,8,w,h);x=14+w+4}catch(e){}}
+ p.setFontSize(14);p.text(CO.name,x,14);if(CO.slogan){p.setFontSize(9);p.text(CO.slogan,x,19)}p.setFontSize(12);p.text(t,14,28);return 33}
 function planFill(s){const c=D.clients.find(x=>x.id===s.value),f=s.form.elements.freq;if(c&&c.plan&&f)f.value=c.plan}
 function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
  if(c.days&&c.days.length){for(let i=0;i<8;i++){if(c.days.includes(d.getDay()))break;d.setDate(d.getDate()+1)}}
@@ -226,7 +261,7 @@ function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
 function render(){
  if(!U||!CO)return;
  const sc=($('main')||{}).scrollTop||0,tabs=isAdmin?[...TABS,['admin','Admin do portal','👑']]:TABS;
- $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh"><div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div><div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div></div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
+ $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Alternar tema" aria-label="Alternar tema" onclick="toggleMode()"><span id="tmi">${isDark()?SUN:MOON}</span></button><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh">${CO.logo?`<img class="avl" src="${esc(CO.logo)}" alt="">`:`<div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div>`}<div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div>${CO.slogan?`<div class="sr"><i>${esc(CO.slogan)}</i></div>`:''}</div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
  const m=$('main');if(m)m.scrollTop=sc}
 
 /* ---------- Login e cadastro ---------- */
@@ -257,6 +292,7 @@ async function boot(u){
  if(!u){CO=null;isAdmin=false;tab='home';return renderAuth()}
  try{const s=await db.doc('companies/'+u.uid).get();CO=s.exists?s.data():{name:u.email,segment:''};isAdmin=(await db.doc('admins/'+u.uid).get()).exists}
  catch(x){CO={name:u.email,segment:''};toast(x.message)}
+ if(!CO.name)CO.name=u.email;if(CO.mode)MODE=CO.mode;if(CO.palette&&PAL[CO.palette])PALK=CO.palette;ls('gm',MODE);ls('gp',PALK);applyTheme();
  ['employees','clients','appts','tx','services'].forEach(k=>subs.push(col(k).onSnapshot(s=>{D[k]=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('Erro: '+e.message))));
  if(isAdmin)subs.push(db.collection('companies').onSnapshot(s=>{D.cos=s.docs.map(d=>d.data());render()}));
  render()}
