@@ -14,9 +14,14 @@ h1,h3{font-family:Fraunces,Georgia,serif;margin:0 0 8px}
 header{background:var(--p);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5;border-bottom:4px solid var(--k)}
 header b{font-family:Fraunces,Georgia,serif;font-size:18px}header small{display:block;opacity:.8}
 main{max-width:720px;margin:0 auto;padding:14px 14px 90px}
-nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:5}
-nav button{flex:1;border:0;background:none;color:var(--mu);padding:14px 2px 12px;font-size:13px;border-top:3px solid transparent;margin-top:-1px}
-nav .on{color:var(--pl);border-top-color:var(--pl);font-weight:700}
+.burger{background:none;border:0;padding:8px;display:flex;flex-direction:column;gap:5px}.burger i{display:block;width:24px;height:3px;background:#fff;border-radius:2px}
+.hn{flex:1;margin-left:10px;min-width:0}
+.drawer{position:fixed;inset:0;background:#0007;z-index:15;display:none}.drawer.open{display:block}
+.drawer nav{background:var(--card);width:min(280px,82vw);height:100%;padding:calc(16px + env(safe-area-inset-top)) 0 16px;display:flex;flex-direction:column;overflow:auto}
+.drawer nav button{background:none;border:0;text-align:left;padding:14px 20px;color:var(--tx);font-size:16px;border-left:4px solid transparent}
+.drawer nav .on{color:var(--pl);font-weight:700;border-left-color:var(--pl);background:var(--bg)}
+.drawer nav hr{border:0;border-top:1px solid var(--bd);width:100%;margin:8px 0}
+.wk{display:flex;flex-wrap:wrap;gap:4px 14px}
 button{font:inherit;cursor:pointer}
 .card,.ann{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
 .ann{border-left:5px solid var(--t)}.ann.alerta{border-left-color:#e0a100}.ann.publicidade{border-left-color:var(--k)}
@@ -85,27 +90,28 @@ const ERR={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid
 /* ---------- Esquemas dos formulários ---------- */
 const DUR=[];for(let h=1;h<=10;h+=.5)DUR.push([h,h+'h']);
 const SCH={
- clients:{t:'cliente',f:()=>[['name','Nome','text'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['obs','Observações','textarea']]},
- employees:{t:'funcionário(a)',f:()=>[['name','Nome','text'],['role','Função','select',['Líder','Novato(a)']],['phone','Telefone','tel'],['obs','Observações','text']]},
+ clients:{t:'cliente',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do cliente)','email'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['plan','Plano de limpeza','select',['Avulso','Semanal','Quinzenal','Mensal']],['days','Dias da limpeza','days'],['obs','Observações','textarea']]},
+ employees:{t:'funcionário(a)',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do profissional)','email'],['role','Função','select',['Líder','Novato(a)']],['phone','Telefone','tel'],['obs','Observações','text']]},
  appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['emps','Equipe','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
  tx:{t:'lançamento',def:{date:today(),type:'despesa'},f:()=>[['type','Tipo','select',[['receita','Receita'],['despesa','Despesa']]],['desc','Descrição','text'],['amount','Valor (R$)','number'],['date','Data','date']]},
  ann:{t:'publicação',f:()=>[['type','Tipo','select',[['novidade','Novidade'],['alerta','Alerta'],['publicidade','Publicidade']]],['title','Título','text'],['text','Texto','textarea']]}
 };
 function fld(n,l,t,op,v){
  if(t==='emps')return`<fieldset><legend>${l}</legend>${D.employees.map(e=>`<label class="chk"><input type="checkbox" name="${n}" value="${e.id}" ${(v||[]).includes(e.id)?'checked':''}> ${esc(e.name)} <small>(${esc(e.role)})</small></label>`).join('')||'<small>Cadastre funcionários na aba Equipe.</small>'}</fieldset>`;
+ if(t==='days')return`<fieldset><legend>${l}</legend><div class="wk">${WD.map((d,i)=>`<label class="chk"><input type="checkbox" name="${n}" value="${i}" ${(v||[]).includes(i)?'checked':''}> ${d}</label>`).join('')}</div></fieldset>`;
  let i;
- if(t==='select')i=`<select name="${n}">${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
+ if(t==='select')i=`<select name="${n}"${n==='client'?' onchange="planFill(this)"':''}>${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
  else if(t==='textarea')i=`<textarea name="${n}" rows="3">${esc(v)}</textarea>`;
  else i=`<input name="${n}" type="${t}" value="${esc(v)}" ${t==='number'?'step="0.01" min="0" inputmode="decimal"':''} ${['name','title','date','time','desc'].includes(n)?'required':''}>`;
  return`<label>${l}${i}</label>`}
-function edit(k,id){
+function edit(k,id,pre){
  if(k==='appts'&&!D.clients.length)return toast('Cadastre um cliente antes de agendar.');
- const S=SCH[k],o=id?D[k].find(x=>x.id===id):(S.def||{});
+ const S=SCH[k],o=id?D[k].find(x=>x.id===id):{...(S.def||{}),...(pre||{})};
  $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n])).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`}
 const closeM=()=>$('#modal').innerHTML='';
 async function save(e,k,id){
  e.preventDefault();const F=e.target,d={};
- SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
+ SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
  if(k==='appts'&&!id)d.status='pending';
  if(!id)d.createdAt=TS();
  try{id?await col(k).doc(id).update(d):await col(k).add(d);closeM()}catch(x){toast('Não foi possível salvar: '+x.message)}
@@ -139,21 +145,32 @@ function expPDF(){const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa'),pdf=new js
 const annHTML=()=>D.ann.map(a=>`<div class="ann ${a.type}"><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><p>${esc(a.text)}</p></div>`).join('');
 const VIEW={
  home:()=>{const t=D.tx.filter(x=>(x.date||'').startsWith(today().slice(0,7))),r=sum(t,'receita'),d=sum(t,'despesa'),nx=D.appts.filter(a=>a.status!=='done'&&a.date>=today()).sort(cmpA).slice(0,4);
-  return annHTML()+`<section class="card"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a aba Agenda para criar o primeiro.</p>'}</section>`},
+  return hint()+annHTML()+`<section class="card"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a aba Agenda para criar o primeiro.</p>'}</section>`},
  agenda:()=>{const p=D.appts.filter(a=>a.status!=='done').sort(cmpA),h=D.appts.filter(a=>a.status==='done').sort((a,b)=>cmpA(b,a)).slice(0,10);
   return`<div class="bar"><h3>Agenda</h3><button class="btn" onclick="edit('appts')">Novo atendimento</button></div><section class="card">${p.map(apptRow).join('')||'<p class="mu">Nada pendente.</p>'}</section>${h.length?`<h3>Concluídos</h3><section class="card">${h.map(apptRow).join('')}</section>`:''}`},
- clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')}</small></div><div class="acts"><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
- employees:()=>`<div class="bar"><h3>Equipe</h3><button class="btn" onclick="edit('employees')">Novo funcionário</button></div><section class="card">${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
+ clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')} ${esc(c.email||'')}</small><small>Plano ${esc(c.plan||'Avulso')}${c.days&&c.days.length?' &middot; '+c.days.map(i=>WD[i]).join(', '):''}</small></div><div class="acts"><button onclick="agendar('${c.id}')">Agendar</button><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
+ employees:()=>`<div class="bar"><h3>Equipe</h3><button class="btn" onclick="edit('employees')">Novo funcionário</button></div><section class="card">${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.email||'')}</small><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
  fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
   return`<div class="bar"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="btn" onclick="edit('tx')">Novo lançamento</button></div><div class="card"><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></div><div class="bar"><span class="mu">Exportar este mês</span><span class="acts"><button class="ghost" onclick="expPDF()">PDF</button><button class="ghost" onclick="expXLS()">Excel</button></span></div><section class="card">${t.map(x=>`<div class="row"><div><b>${esc(x.desc)}</b><small>${dbr(x.date)}</small></div><b class="${x.type}">${x.type==='despesa'?'-':'+'}${R(x.amount)}</b><div class="acts"><button onclick="del('tx','${x.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Sem lançamentos neste mês.</p>'}</section>`},
+ company:()=>`<h3>Minha empresa</h3><form class="card" onsubmit="return saveCo(event)"><label>Nome da empresa<input name="name" required value="${esc(CO.name)}"></label><label>Segmento<select name="segment">${['Limpeza residencial','Outro'].map(s=>`<option ${s===CO.segment?'selected':''}>${s}</option>`).join('')}</select></label><label>Telefone<input name="phone" type="tel" value="${esc(CO.phone||'')}"></label><button class="btn">Salvar alterações</button></form><section class="card"><small class="mu">E-mail de login: ${esc(U.email)}<br>Administrador do portal: ${isAdmin?'sim':'não'}<br>ID da conta: ${U.uid}</small></section>`,
  admin:()=>`<div class="bar"><h3>Mural do portal</h3><button class="btn" onclick="edit('ann')">Nova publicação</button></div><section class="card">${D.ann.map(a=>`<div class="row"><div><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><small>${esc(a.text)}</small></div><div class="acts"><button onclick="del('ann','${a.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhuma publicação.</p>'}</section><section class="card"><h3>Empresas cadastradas (${D.cos.length})</h3>${D.cos.map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.segment||'')} &middot; ${esc(c.email||'')}</small></div></div>`).join('')}</section>`
 };
-const TABS=[['home','Início'],['agenda','Agenda'],['clients','Clientes'],['employees','Equipe'],['fin','Financeiro']];
-const go=t=>{tab=t;render();scrollTo(0,0)};
+const TABS=[['home','Início'],['agenda','Agenda'],['clients','Clientes'],['employees','Equipe'],['fin','Financeiro'],['company','Minha empresa']];
+const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],ADMIN_EMAIL='willbrasilia@gmail.com';
+let mnu=false;
+const menu=v=>{mnu=v;render()};
+const go=t=>{tab=t;mnu=false;render();scrollTo(0,0)};
+const hint=()=>(!isAdmin&&U.email===ADMIN_EMAIL)?`<div class="ann alerta"><b>Esta conta ainda não é Admin do portal</b><p>No Firestore, crie a coleção "admins" com um documento cujo ID seja exatamente:\n${U.uid}</p></div>`:'';
+async function saveCo(e){e.preventDefault();const f=new FormData(e.target),d={name:f.get('name').trim(),segment:f.get('segment'),phone:f.get('phone'),email:U.email};
+ try{await db.doc('companies/'+U.uid).set(d,{merge:true});CO={...CO,...d};render();toast('Dados da empresa salvos.')}catch(x){toast(x.message)}return false}
+function planFill(s){const c=D.clients.find(x=>x.id===s.value),f=s.form.elements.freq;if(c&&c.plan&&f)f.value=c.plan}
+function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
+ if(c.days&&c.days.length){for(let i=0;i<8;i++){if(c.days.includes(d.getDay()))break;d.setDate(d.getDate()+1)}}
+ edit('appts','',{client:id,freq:c.plan||'Avulso',date:ymd(d)})}
 function render(){
  if(!U||!CO)return;
- const tabs=isAdmin?[...TABS,['admin','Admin']]:TABS;
- $('#app').innerHTML=`<header><div><b>${esc(CO.name)}</b><small>${esc(CO.segment||'')}</small></div><button class="ghost" onclick="auth.signOut()">Sair</button></header><main>${VIEW[tab]()}</main><nav>${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</nav>`}
+ const tabs=isAdmin?[...TABS,['admin','Admin do portal']]:TABS;
+ $('#app').innerHTML=`<header><button class="burger" aria-label="Abrir menu" onclick="menu(true)"><i></i><i></i><i></i></button><div class="hn"><b>${esc(CO.name)}</b><small>${isAdmin?'Administrador do portal':esc(CO.segment||'')}</small></div></header><div class="drawer ${mnu?'open':''}" onclick="if(event.target===this)menu(false)"><nav>${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}<hr><button onclick="auth.signOut()">Sair</button></nav></div><main>${VIEW[tab]()}</main>`}
 
 /* ---------- Login e cadastro ---------- */
 function renderAuth(){
