@@ -74,6 +74,7 @@ a{color:var(--pl)}
 .sw span{width:16px;height:16px;border-radius:50%;margin-right:-4px;border:1px solid #0003}
 .lg{display:block;max-height:64px;max-width:200px;margin:6px 0 10px;border-radius:8px;background:#fff}
 .avl{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none}
+.nb{background:#e07b00;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:auto}
 </style>
 </head>
 <body>
@@ -97,7 +98,7 @@ firebase.initializeApp({
 const auth=firebase.auth(),db=firebase.firestore(),TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 const $=s=>document.querySelector(s);
 let U=null,CO=null,isAdmin=false,tab='home',reg=false,mode='login',subs=[];
-const D={employees:[],clients:[],appts:[],tx:[],services:[],ann:[],cos:[]};
+const D={employees:[],clients:[],appts:[],tx:[],services:[],reqs:[],users:[],ann:[],cos:[]};
 const R=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const p2=n=>String(n).padStart(2,'0');
@@ -106,7 +107,7 @@ const dbr=s=>s?s.split('-').reverse().join('/'):'';
 const today=()=>ymd(new Date());
 let mon=today().slice(0,7);
 const toast=m=>{const t=$('#toast');t.textContent=m;t.className='show';setTimeout(()=>t.className='',2800)};
-const col=k=>k==='ann'?db.collection('announcements'):db.collection(`companies/${U.uid}/${k}`);
+const col=k=>k==='ann'?db.collection('announcements'):k==='users'?db.collection('invites'):db.collection(`companies/${CID}/${k==='reqs'?'requests':k}`);
 const sum=(t,ty)=>t.filter(x=>x.type===ty).reduce((s,x)=>s+(+x.amount||0),0);
 const cmpA=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
 const endT=(t,h)=>{const m=(+t.slice(0,2))*60+(+t.slice(3,5))+Math.round(h*60);return p2(Math.floor(m/60)%24)+':'+p2(m%60)};
@@ -130,7 +131,7 @@ function applyTheme(){const P=PAL[PALK]||PAL.ameixa,d=isDark(),c=d?P.D:P.L,r=doc
 function persistTheme(){ls('gm',MODE);ls('gp',PALK);applyTheme();
  const i=$('#tmi');if(i)i.innerHTML=isDark()?SUN:MOON;
  document.querySelectorAll('.sw').forEach(b=>b.classList.toggle('on',b.dataset.k===PALK));const t=$('#tsel');if(t)t.value=MODE;
- if(U){CO={...CO,mode:MODE,palette:PALK};db.doc('companies/'+U.uid).set({mode:MODE,palette:PALK},{merge:true}).catch(x=>toast(x.message))}}
+ if(U&&!STAFF){CO={...CO,mode:MODE,palette:PALK};syncPublic();db.doc('companies/'+CID).set({mode:MODE,palette:PALK},{merge:true}).catch(x=>toast(x.message))}}
 const toggleMode=()=>{MODE=isDark()?'light':'dark';persistTheme()};
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{if(MODE==='auto'){applyTheme();const i=$('#tmi');if(i)i.innerHTML=isDark()?SUN:MOON}});
 applyTheme();
@@ -143,11 +144,13 @@ const SCH={
  appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['service','Tipo de serviço','select',[['','Selecione...'],...D.services.map(s=>[s.id,s.name])]],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['emps','Equipe','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
  tx:{t:'lançamento',def:{date:today(),type:'despesa'},f:()=>[['type','Tipo','select',[['receita','Receita'],['despesa','Despesa']]],['desc','Descrição','text'],['amount','Valor (R$)','number'],['date','Data','date']]},
  services:{t:'tipo de serviço',def:{dur:4},f:()=>[['name','Nome do serviço','text'],['dur','Duração padrão','select',DUR],['price','Valor padrão (R$)','number'],['obs','Observações','text']]},
+ users:{t:'usuário administrativo',f:()=>[['name','Nome','text'],['email','E-mail do usuário (o mesmo do convite)','email'],['perms','Permissões de acesso','perms']]},
  ann:{t:'publicação',f:()=>[['type','Tipo','select',[['novidade','Novidade'],['alerta','Alerta'],['publicidade','Publicidade']]],['title','Título','text'],['text','Texto','textarea']]}
 };
 function fld(n,l,t,op,v){
  if(t==='emps')return`<fieldset><legend>${l}</legend>${D.employees.map(e=>`<label class="chk"><input type="checkbox" name="${n}" value="${e.id}" ${(v||[]).includes(e.id)?'checked':''}> ${esc(e.name)} <small>(${esc(e.role)})</small></label>`).join('')||'<small>Cadastre funcionários na aba Equipe.</small>'}</fieldset>`;
  if(t==='days')return`<fieldset><legend>${l}</legend><div class="wk">${WD.map((d,i)=>`<label class="chk"><input type="checkbox" name="${n}" value="${i}" ${(v||[]).includes(i)?'checked':''}> ${d}</label>`).join('')}</div></fieldset>`;
+ if(t==='perms')return`<fieldset><legend>${l}</legend>${PERMS.map(([k,n])=>`<label class="chk"><input type="checkbox" name="perms" value="${k}" ${(v||{})[k]?'checked':''}> ${n}</label>`).join('')}<small class="mu">O painel inicial sempre fica disponível.</small></fieldset>`;
  let i;
  if(t==='select')i=`<select name="${n}"${n==='client'?' onchange="planFill(this)"':n==='service'?' onchange="svcFill(this)"':''}>${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
  else if(t==='textarea')i=`<textarea name="${n}" rows="3">${esc(v)}</textarea>`;
@@ -156,23 +159,24 @@ function fld(n,l,t,op,v){
 function edit(k,id,pre){
  if(k==='appts'&&!D.clients.length)return toast('Cadastre um cliente antes de agendar.');
  const S=SCH[k],o=id?D[k].find(x=>x.id===id):{...(S.def||{}),...(pre||{})};
- $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n])).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`}
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n])).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`;
+ if(k==='users'&&id)$('#modal input[name=email]').readOnly=true}
 const closeM=()=>$('#modal').innerHTML='';
 async function save(e,k,id){
  e.preventDefault();const F=e.target,d={};
- SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
+ SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else if(t==='perms'){d.perms={};PERMS.forEach(([k])=>d.perms[k]=!!F.querySelector('input[name="perms"][value="'+k+'"]:checked'))}else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
  if(k==='appts'&&!id)d.status='pending';
  if(!id)d.createdAt=TS();
- try{id?await col(k).doc(id).update(d):await col(k).add(d);closeM()}catch(x){toast('Não foi possível salvar: '+x.message)}
+ try{if(k==='users'){const em=(id||d.email||'').trim().toLowerCase();if(!em){toast('Informe o e-mail.');return false}await col(k).doc(em).set({...d,email:em,company:CID},{merge:true})}else id?await col(k).doc(id).update(d):await col(k).add(d);closeM()}catch(x){toast('Não foi possível salvar: '+x.message)}
  return false}
 async function del(k,id){if(!confirm('Excluir este item?'))return;try{await col(k).doc(id).delete()}catch(x){toast(x.message)}}
 
 /* ---------- Atendimentos ---------- */
 async function done(id){
- const a=D.appts.find(x=>x.id===id),cl=D.clients.find(c=>c.id===a.client),n=cl?cl.name:'Cliente',b=db.batch(),base=`companies/${U.uid}/`;
+ const a=D.appts.find(x=>x.id===id),cl=D.clients.find(c=>c.id===a.client),n=cl?cl.name:'Cliente',b=db.batch(),base=`companies/${CID}/`;
  b.update(db.doc(base+'appts/'+id),{status:'done'});
- if(a.price>0)b.set(db.collection(base+'tx').doc(),{type:'receita',desc:'Limpeza - '+n,amount:a.price,date:a.date,appt:id,createdAt:TS()});
- if(a.uber>0)b.set(db.collection(base+'tx').doc(),{type:'despesa',desc:'Uber (deslocamento) - '+n,amount:a.uber,date:a.date,appt:id,createdAt:TS()});
+ if(a.price>0&&can('fin'))b.set(db.collection(base+'tx').doc(),{type:'receita',desc:'Limpeza - '+n,amount:a.price,date:a.date,appt:id,createdAt:TS()});
+ if(a.uber>0&&can('fin'))b.set(db.collection(base+'tx').doc(),{type:'despesa',desc:'Uber (deslocamento) - '+n,amount:a.uber,date:a.date,appt:id,createdAt:TS()});
  const nx=nextDate(a.date,a.freq);
  if(nx){const{id:_,...r}=a;b.set(db.collection(base+'appts').doc(),{...r,date:nx,status:'pending',createdAt:TS()})}
  try{await b.commit();toast('Atendimento concluído.'+(nx?' Próximo agendado para '+dbr(nx)+'.':''))}catch(x){toast(x.message)}}
@@ -193,8 +197,8 @@ function expPDF(){const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa'),pdf=new js
 /* ---------- Telas ---------- */
 const annHTML=()=>D.ann.map(a=>`<div class="ann ${a.type}"><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><p>${esc(a.text)}</p></div>`).join('');
 const VIEW={
- home:()=>{const t=D.tx.filter(x=>(x.date||'').startsWith(today().slice(0,7))),r=sum(t,'receita'),d=sum(t,'despesa'),nx=D.appts.filter(a=>a.status!=='done'&&a.date>today()).sort(cmpA).slice(0,4),hoje=D.appts.filter(a=>a.date===today()).sort(cmpA);
-  return hint()+annHTML()+`<div class="dash"><section class="card"><div class="bar"><h3 style="margin:0">Agenda de hoje</h3><button class="ghost" onclick="shareDay(today())">Compartilhar</button></div>${hoje.map(apptRow).join('')||'<p class="mu">Nenhum atendimento hoje.</p>'}</section><section class="card full"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a Agenda no menu para criar o primeiro.</p>'}</section></div>`},
+ home:()=>{const t=D.tx.filter(x=>(x.date||'').startsWith(today().slice(0,7))),r=sum(t,'receita'),d=sum(t,'despesa'),nx=D.appts.filter(a=>a.status!=='done'&&a.date>today()).sort(cmpA).slice(0,4),hoje=D.appts.filter(a=>a.date===today()).sort(cmpA),nR=D.reqs.filter(q=>q.status==='new').length;
+  return hint()+annHTML()+`<div class="dash">${can('agenda')&&nR?`<section class="card full"><b>${nR} solicitação(ões) de agendamento aguardando.</b> <button class="btn" style="margin-left:8px" onclick="go('reqs')">Ver solicitações</button></section>`:''}${can('fin')?`<section class="card full"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section>`:''}${can('agenda')?`<section class="card"><div class="bar"><h3 style="margin:0">Agenda de hoje</h3><button class="ghost" onclick="shareDay(today())">Compartilhar</button></div>${hoje.map(apptRow).join('')||'<p class="mu">Nenhum atendimento hoje.</p>'}</section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a Agenda no menu para criar o primeiro.</p>'}</section>`:''}</div>`},
  agenda:()=>{const[y,m]=calM.split('-').map(Number),first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate(),cnt={};
   D.appts.forEach(a=>cnt[a.date]=(cnt[a.date]||0)+1);
   let cells=WD.map(d=>`<div class="h">${d}</div>`).join('')+'<span></span>'.repeat(first);
@@ -206,10 +210,16 @@ const VIEW={
  services:()=>`<div class="bar"><h3>Tipos de serviço</h3><button class="btn" onclick="edit('services')">Novo tipo</button></div><section class="card">${D.services.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="row"><div><b>${esc(s.name)}</b><small>${s.dur}h &middot; ${R(s.price)}</small></div><div class="acts"><button onclick="edit('services','${s.id}')">Editar</button><button onclick="del('services','${s.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Cadastre os serviços que a empresa oferece, como limpeza de apartamento, estofados ou pós-obra.</p>'}</section>`,
  fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
   return`<div class="bar"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="btn" onclick="edit('tx')">Novo lançamento</button></div><div class="card"><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></div><div class="bar"><span class="mu">Exportar este mês</span><span class="acts"><button class="ghost" onclick="expPDF()">PDF</button><button class="ghost" onclick="expXLS()">Excel</button></span></div><section class="card">${t.map(x=>`<div class="row"><div><b>${esc(x.desc)}</b><small>${dbr(x.date)}</small></div><b class="${x.type}">${x.type==='despesa'?'-':'+'}${R(x.amount)}</b><div class="acts"><button onclick="del('tx','${x.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Sem lançamentos neste mês.</p>'}</section>`},
- company:()=>`<h3>Minha empresa</h3><form class="card" onsubmit="return saveCo(event)"><label>Nome da empresa<input name="name" required value="${esc(CO.name)}"></label><label>Slogan<input name="slogan" maxlength="80" placeholder="Ex.: Sua casa em boas mãos" value="${esc(CO.slogan||'')}"></label><fieldset><legend>Logo</legend><img id="lgp" class="lg" alt="Logo" src="${esc(CO.logo||'')}" style="${CO.logo?'':'display:none'}"><input type="hidden" name="logo" value="${esc(CO.logo||'')}"><input type="hidden" name="logoR" value="${CO.logoR||''}"><input type="file" accept="image/*" onchange="logoPick(this)"><p class="mu" style="margin:6px 0">Aparece no menu e nos PDFs. Clique em Salvar alterações para guardar.</p><button type="button" class="ghost" onclick="logoDel(this)">Remover logo</button></fieldset><label>Segmento<select name="segment">${['Limpeza residencial','Outro'].map(s=>`<option ${s===CO.segment?'selected':''}>${s}</option>`).join('')}</select></label><label>Telefone<input name="phone" type="tel" value="${esc(CO.phone||'')}"></label><button class="btn">Salvar alterações</button></form><section class="card"><h3>Aparência</h3><label>Tema<select id="tsel" onchange="MODE=this.value;persistTheme()"><option value="auto" ${MODE==='auto'?'selected':''}>Automático (igual ao aparelho)</option><option value="light" ${MODE==='light'?'selected':''}>Claro</option><option value="dark" ${MODE==='dark'?'selected':''}>Escuro</option></select></label><div class="pal">${Object.entries(PAL).map(([k,v])=>`<button type="button" class="sw ${k===PALK?'on':''}" data-k="${k}" onclick="PALK='${k}';persistTheme()"><span style="background:${v.p}"></span><span style="background:${v.k}"></span>${v.n}</button>`).join('')}</div></section><section class="card"><small class="mu">E-mail de login: ${esc(U.email)}<br>Administrador do portal: ${isAdmin?'sim':'não'}<br>ID da conta: ${U.uid}</small></section>`,
+ reqs:()=>{const L=D.reqs.filter(q=>q.status==='new').sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time));
+  return`<h3>Solicitações de agendamento</h3><section class="card">${L.map(q=>`<div class="row"><div><b>${esc(q.name)}</b> <span class="tag">${esc(q.svcName||'Serviço a combinar')}</span><small>${dbr(q.date)} às ${esc(q.time)} &middot; ${esc(q.phone)}</small><small>${esc(q.addr||'')} ${esc(q.obs||'')}</small></div><div class="acts"><button onclick="approve('${q.id}')">Aprovar</button><button onclick="rejectReq('${q.id}')">Recusar</button></div></div>`).join('')||'<p class="mu">Nenhuma solicitação nova. Ative o agendamento online em Minha empresa e envie o link aos clientes.</p>'}</section>`},
+ users:()=>`<div class="bar"><h3>Usuários administrativos</h3><button class="btn" onclick="edit('users')">Novo usuário</button></div><section class="card">${D.users.map(u=>`<div class="row"><div><b>${esc(u.name)}</b><small>${esc(u.email)}</small><small>Acesso: ${PERMS.filter(p=>u.perms&&u.perms[p[0]]).map(p=>p[1]).join(', ')||'somente o painel inicial'}</small></div><div class="acts"><button onclick="edit('users','${u.id}')">Editar</button><button onclick="del('users','${u.id}')">Remover</button></div></div>`).join('')||'<p class="mu">Nenhum usuário. Depois de cadastrar, a pessoa cria o acesso na tela de login, em "Tenho convite", usando o mesmo e-mail.</p>'}</section>`,
+ company:()=>`<h3>Minha empresa</h3><form class="card" onsubmit="return saveCo(event)"><label>Nome da empresa<input name="name" required value="${esc(CO.name)}"></label><label>Slogan<input name="slogan" maxlength="80" placeholder="Ex.: Sua casa em boas mãos" value="${esc(CO.slogan||'')}"></label><fieldset><legend>Logo</legend><img id="lgp" class="lg" alt="Logo" src="${esc(CO.logo||'')}" style="${CO.logo?'':'display:none'}"><input type="hidden" name="logo" value="${esc(CO.logo||'')}"><input type="hidden" name="logoR" value="${CO.logoR||''}"><input type="file" accept="image/*" onchange="logoPick(this)"><p class="mu" style="margin:6px 0">Aparece no menu e nos PDFs. Clique em Salvar alterações para guardar.</p><button type="button" class="ghost" onclick="logoDel(this)">Remover logo</button></fieldset><label>Segmento<select name="segment">${['Limpeza residencial','Outro'].map(s=>`<option ${s===CO.segment?'selected':''}>${s}</option>`).join('')}</select></label><label>Telefone<input name="phone" type="tel" value="${esc(CO.phone||'')}"></label><button class="btn">Salvar alterações</button></form><section class="card"><h3>Aparência</h3><label>Tema<select id="tsel" onchange="MODE=this.value;persistTheme()"><option value="auto" ${MODE==='auto'?'selected':''}>Automático (igual ao aparelho)</option><option value="light" ${MODE==='light'?'selected':''}>Claro</option><option value="dark" ${MODE==='dark'?'selected':''}>Escuro</option></select></label><div class="pal">${Object.entries(PAL).map(([k,v])=>`<button type="button" class="sw ${k===PALK?'on':''}" data-k="${k}" onclick="PALK='${k}';persistTheme()"><span style="background:${v.p}"></span><span style="background:${v.k}"></span>${v.n}</button>`).join('')}</div></section><section class="card"><h3>Agendamento online para clientes</h3><label class="chk"><input type="checkbox" ${CO.booking?'checked':''} onchange="setBooking(this.checked)"> Permitir que clientes solicitem agendamento pelo link</label>${CO.booking?`<p class="mu" style="word-break:break-all">${bookLink()}</p><div class="acts"><button class="ghost" onclick="copyLink()">Copiar link</button><button class="ghost" onclick="shareLink()">Enviar por WhatsApp</button></div>`:''}</section>`,
  admin:()=>`<div class="bar"><h3>Mural do portal</h3><button class="btn" onclick="edit('ann')">Nova publicação</button></div><section class="card">${D.ann.map(a=>`<div class="row"><div><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><small>${esc(a.text)}</small></div><div class="acts"><button onclick="del('ann','${a.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhuma publicação.</p>'}</section><section class="card"><h3>Empresas cadastradas (${D.cos.length})</h3>${D.cos.map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.segment||'')} &middot; ${esc(c.email||'')}</small></div></div>`).join('')}</section>`
 };
-const TABS=[['home','Dashboard','📊'],['agenda','Agenda','📅'],['clients','Clientes','👥'],['employees','Equipe','🧹'],['services','Serviços','🧰'],['fin','Financeiro','💰'],['company','Minha empresa','🏢']];
+let CID=null,STAFF=false,PERM={},BK={};
+const TABS=[['home','Dashboard','📊'],['agenda','Agenda','📅','agenda'],['reqs','Solicitações','📨','agenda'],['clients','Clientes','👥','clients'],['employees','Equipe','🧹','employees'],['services','Serviços','🧰','services'],['fin','Financeiro','💰','fin'],['users','Usuários','🔑','own'],['company','Minha empresa','🏢','own']];
+const PERMS=[['agenda','Agenda e solicitações'],['clients','Clientes'],['employees','Equipe'],['services','Serviços'],['fin','Financeiro']];
+const can=k=>!STAFF||!!PERM[k];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
 let calM=today().slice(0,7),selDay=today();
 const calGo=d=>{const[y,m]=calM.split('-').map(Number),x=new Date(y,m-1+d,1);calM=x.getFullYear()+'-'+p2(x.getMonth()+1);render()};
@@ -246,7 +256,7 @@ const toggleMenu=()=>{innerWidth<900?mnu=!mnu:sbc=!sbc;render()};
 const go=t=>{tab=t;mnu=false;render();const m=$('main');if(m)m.scrollTop=0};
 const hint=()=>(!isAdmin&&U.email===ADMIN_EMAIL)?`<div class="ann alerta"><b>Esta conta ainda não é Admin do portal</b><p>No Firestore, crie a coleção "admins" com um documento cujo ID seja exatamente:\n${U.uid}</p></div>`:'';
 async function saveCo(e){e.preventDefault();const f=new FormData(e.target),d={name:f.get('name').trim(),slogan:f.get('slogan').trim(),logo:f.get('logo')||'',logoR:parseFloat(f.get('logoR'))||0,segment:f.get('segment'),phone:f.get('phone'),email:U.email};
- try{await db.doc('companies/'+U.uid).set(d,{merge:true});CO={...CO,...d};render();toast('Dados da empresa salvos.')}catch(x){toast(x.message)}return false}
+ try{await db.doc('companies/'+CID).set(d,{merge:true});CO={...CO,...d};syncPublic();render();toast('Dados da empresa salvos.')}catch(x){toast(x.message)}return false}
 function logoPick(inp){const fl=inp.files[0];if(!fl)return;const r=new FileReader();
  r.onload=()=>{const im=new Image();im.onload=()=>{const k=Math.min(1,256/Math.max(im.width,im.height)),c=document.createElement('canvas');c.width=Math.round(im.width*k);c.height=Math.round(im.height*k);c.getContext('2d').drawImage(im,0,0,c.width,c.height);
   let u=c.toDataURL('image/png');if(u.length>250000)u=c.toDataURL('image/jpeg',.85);
@@ -260,14 +270,44 @@ function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
  edit('appts','',{client:id,freq:c.plan||'Avulso',date:ymd(d)})}
 function render(){
  if(!U||!CO)return;
- const sc=($('main')||{}).scrollTop||0,tabs=isAdmin?[...TABS,['admin','Admin do portal','👑']]:TABS;
- $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Alternar tema" aria-label="Alternar tema" onclick="toggleMode()"><span id="tmi">${isDark()?SUN:MOON}</span></button><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh">${CO.logo?`<img class="avl" src="${esc(CO.logo)}" alt="">`:`<div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div>`}<div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div>${CO.slogan?`<div class="sr"><i>${esc(CO.slogan)}</i></div>`:''}</div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
+ const sc=($('main')||{}).scrollTop||0,nR=D.reqs.filter(q=>q.status==='new').length,tabs=(isAdmin?[...TABS,['admin','Admin do portal','👑','own']]:TABS).filter(t=>!t[3]||(t[3]==='own'?!STAFF:can(t[3])));
+ $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Alternar tema" aria-label="Alternar tema" onclick="toggleMode()"><span id="tmi">${isDark()?SUN:MOON}</span></button><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh">${CO.logo?`<img class="avl" src="${esc(CO.logo)}" alt="">`:`<div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div>`}<div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div>${CO.slogan?`<div class="sr"><i>${esc(CO.slogan)}</i></div>`:''}</div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}${k==='reqs'&&nR?`<b class="nb">${nR}</b>`:''}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
  const m=$('main');if(m)m.scrollTop=sc}
+
+/* ---------- Agendamento online, solicitações e convites ---------- */
+const bookLink=()=>location.origin+location.pathname+'?agendar='+CID;
+function syncPublic(){if(STAFF||!CO||CO.booking===undefined)return;
+ db.doc('public/'+CID).set({enabled:!!CO.booking,name:CO.name||'',slogan:CO.slogan||'',logo:CO.logo||'',logoR:CO.logoR||0,phone:CO.phone||'',palette:CO.palette||PALK,mode:CO.mode||'auto',services:D.services.map(x=>({id:x.id,name:x.name,dur:x.dur||0}))}).catch(()=>{})}
+async function setBooking(v){CO={...CO,booking:v};try{await db.doc('companies/'+CID).set({booking:v},{merge:true});syncPublic()}catch(x){toast(x.message)}render()}
+const copyLink=()=>navigator.clipboard.writeText(bookLink()).then(()=>toast('Link copiado.'),()=>toast('Copie o link manualmente.'));
+const shareLink=()=>window.open('https://wa.me/?text='+encodeURIComponent('Agende seu serviço pelo link: '+bookLink()),'_blank');
+async function approve(id){const q=D.reqs.find(x=>x.id===id),sv=D.services.find(x=>x.id===q.svc),b=db.batch(),base=`companies/${CID}/`,cr=db.collection(base+'clients').doc(),ap=db.collection(base+'appts').doc();
+ b.set(cr,{name:q.name,phone:q.phone,email:q.email||'',addr:q.addr||'',kind:'',plan:'Avulso',days:[],obs:'',createdAt:TS()});
+ b.set(ap,{client:cr.id,service:q.svc||'',date:q.date,time:q.time,dur:sv?sv.dur:4,emps:[],freq:'Avulso',price:sv?(sv.price||0):0,uber:0,obs:q.obs||'',status:'pending',createdAt:TS()});
+ b.update(db.doc(base+'requests/'+id),{status:'approved'});
+ try{await b.commit();toast('Agendado! Defina a equipe na Agenda.')}catch(x){toast(x.message)}}
+async function rejectReq(id){if(!confirm('Recusar esta solicitação?'))return;try{await db.doc(`companies/${CID}/requests/${id}`).update({status:'rejected'})}catch(x){toast(x.message)}}
+async function renderBooking(cid){
+ $('#app').innerHTML='<div class="auth"><p class="mu">Carregando...</p></div>';
+ let P=null;try{const g=await db.doc('public/'+cid).get();P=g.exists?g.data():null}catch(e){}
+ if(!P||!P.enabled){$('#app').innerHTML='<div class="auth"><div class="card"><h3>Agendamento indisponível</h3><p class="mu">Esta empresa não está recebendo solicitações online no momento.</p></div></div>';return}
+ BK=P;if(PAL[P.palette])PALK=P.palette;MODE=P.mode||'auto';applyTheme();
+ $('#app').innerHTML=`<div class="auth"><div class="brand" style="text-align:center">${P.logo?`<img class="lg" style="margin:0 auto 8px" src="${esc(P.logo)}" alt="">`:''}<h1>${esc(P.name)}</h1><p>${esc(P.slogan||'Solicite seu agendamento')}</p></div>
+ <form class="card" onsubmit="return sendReq(event,'${esc(cid)}')"><label>Seu nome<input name="name" required maxlength="80"></label><label>WhatsApp / telefone<input name="phone" type="tel" required maxlength="20"></label><label>E-mail (opcional)<input name="email" type="email" maxlength="80"></label><label>Endereço do serviço<input name="addr" required maxlength="140"></label>
+ <label>Tipo de serviço<select name="svc"><option value="">A combinar</option>${(P.services||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.name)}</option>`).join('')}</select></label>
+ <label>Data desejada<input name="date" type="date" required min="${today()}"></label><label>Horário preferido<input name="time" type="time" value="08:30" required></label><label>Observações<textarea name="obs" rows="3" maxlength="300"></textarea></label>
+ <button class="btn" style="width:100%">Enviar solicitação</button><p id="err" class="err"></p></form></div>`}
+async function sendReq(e,cid){e.preventDefault();const f=new FormData(e.target),sv=(BK.services||[]).find(x=>x.id===f.get('svc')),
+ d={name:f.get('name').trim(),phone:f.get('phone').trim(),email:f.get('email').trim(),addr:f.get('addr').trim(),svc:f.get('svc'),svcName:sv?sv.name:'',date:f.get('date'),time:f.get('time'),obs:f.get('obs').trim(),status:'new',createdAt:TS()};
+ try{await db.collection('companies/'+cid+'/requests').add(d);$('#app').innerHTML=`<div class="auth"><div class="card"><h3>Solicitação enviada!</h3><p>${esc(BK.name)} vai entrar em contato pelo telefone informado para confirmar data e horário.</p></div></div>`}catch(x){$('#err').textContent='Não foi possível enviar. Tente novamente em instantes.'}return false}
+function renderVerify(u){$('#app').innerHTML=`<div class="auth"><div class="brand"><h1>Confirme seu e-mail</h1><p>Enviamos um link de confirmação para ${esc(u.email)}. Depois de confirmar, toque em "Já confirmei".</p></div><div class="card"><button class="btn" style="width:100%" onclick="recheck()">Já confirmei</button><p></p><button class="ghost" style="width:100%" onclick="resendV()">Reenviar e-mail</button><p></p><button class="ghost" style="width:100%" onclick="auth.signOut()">Sair</button></div></div>`}
+async function recheck(){try{await auth.currentUser.reload();await auth.currentUser.getIdToken(true);boot(auth.currentUser)}catch(x){toast(x.message)}}
+const resendV=async()=>{try{await auth.currentUser.sendEmailVerification();toast('E-mail reenviado.')}catch(x){toast(x.message)}};
 
 /* ---------- Login e cadastro ---------- */
 function renderAuth(){
  $('#app').innerHTML=`<div class="auth"><div class="brand"><h1>Portal de Gestão Empresarial</h1><p>Agenda, clientes, equipe e financeiro da sua empresa em um só lugar.</p></div><div id="annbox">${annHTML()}</div>
- <form class="card" onsubmit="return doAuth(event)"><div class="seg"><button type="button" class="${mode==='login'?'on':''}" onclick="mode='login';renderAuth()">Entrar</button><button type="button" class="${mode==='reg'?'on':''}" onclick="mode='reg';renderAuth()">Cadastrar empresa</button></div>
+ <form class="card" onsubmit="return doAuth(event)"><div class="seg"><button type="button" class="${mode==='login'?'on':''}" onclick="mode='login';renderAuth()">Entrar</button><button type="button" class="${mode==='reg'?'on':''}" onclick="mode='reg';renderAuth()">Nova empresa</button><button type="button" class="${mode==='inv'?'on':''}" onclick="mode='inv';renderAuth()">Tenho convite</button></div>${mode==='inv'?'<p class="mu">Use o mesmo e-mail em que a empresa cadastrou você. Enviaremos um link de confirmação.</p>':''}
  ${mode==='reg'?`<label>Nome da empresa<input name="name" required></label><label>Segmento<select name="seg"><option>Limpeza residencial</option><option>Outro</option></select></label>`:''}
  <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
  <label>Senha<input name="pw" type="password" minlength="6" required autocomplete="${mode==='login'?'current-password':'new-password'}"></label>
@@ -279,27 +319,38 @@ async function doAuth(e){
  try{
   await auth.setPersistence(f.get('keep')?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION);
   if(mode==='login')await auth.signInWithEmailAndPassword(em,pw);
+  else if(mode==='inv'){reg=true;const c=await auth.createUserWithEmailAndPassword(em,pw);let ok=false;try{ok=(await db.doc('invites/'+em.toLowerCase()).get()).exists}catch(x){}
+   if(!ok){await c.user.delete();reg=false;throw{message:'Nenhum convite encontrado para este e-mail. Peça à empresa para cadastrar você em Usuários.'}}
+   await c.user.sendEmailVerification();reg=false;boot(c.user)}
   else{reg=true;const c=await auth.createUserWithEmailAndPassword(em,pw);
    await db.doc('companies/'+c.user.uid).set({name:f.get('name'),segment:f.get('seg'),email:em,createdAt:TS()});reg=false;boot(c.user)}
- }catch(x){reg=false;$('#err').textContent=ERR[x.code]||x.message}
+ }catch(x){reg=false;const m=ERR[x.code]||x.message,el=$('#err');if(el)el.textContent=m;toast(m)}
  return false}
 async function resetPw(){const em=document.querySelector('input[name=email]').value;if(!em){toast('Digite seu e-mail primeiro.');return false}
  try{await auth.sendPasswordResetEmail(em);toast('Enviamos um link para redefinir a senha.')}catch(x){toast(ERR[x.code]||x.message)}return false}
 
 /* ---------- Inicialização ---------- */
 async function boot(u){
- subs.forEach(f=>f());subs=[];U=u;
+ subs.forEach(f=>f());subs=[];U=u;CID=u?u.uid:null;STAFF=false;PERM={};
+ Object.keys(D).forEach(k=>{if(k!=='ann')D[k]=[]});
  if(!u){CO=null;isAdmin=false;tab='home';return renderAuth()}
- try{const s=await db.doc('companies/'+u.uid).get();CO=s.exists?s.data():{name:u.email,segment:''};isAdmin=(await db.doc('admins/'+u.uid).get()).exists}
- catch(x){CO={name:u.email,segment:''};toast(x.message)}
+ let g=null;try{g=await db.doc('companies/'+u.uid).get()}catch(e){}
+ if(g&&g.exists)CO=g.data();
+ else{let iv=null;try{const q=await db.doc('invites/'+(u.email||'').toLowerCase()).get();if(q.exists)iv=q.data()}catch(e){}
+  if(iv){if(!u.emailVerified)return renderVerify(u);STAFF=true;CID=iv.company;PERM=iv.perms||{};try{CO=(await db.doc('companies/'+CID).get()).data()||{}}catch(e){CO={}}}
+  else CO={name:u.email,segment:''}}
+ try{isAdmin=!STAFF&&(await db.doc('admins/'+u.uid).get()).exists}catch(e){isAdmin=false}
  if(!CO.name)CO.name=u.email;if(CO.mode)MODE=CO.mode;if(CO.palette&&PAL[CO.palette])PALK=CO.palette;ls('gm',MODE);ls('gp',PALK);applyTheme();
- ['employees','clients','appts','tx','services'].forEach(k=>subs.push(col(k).onSnapshot(s=>{D[k]=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('Erro: '+e.message))));
- if(isAdmin)subs.push(db.collection('companies').onSnapshot(s=>{D.cos=s.docs.map(d=>d.data());render()}));
+ const need=new Set();if(can('agenda'))['appts','reqs','clients','employees','services'].forEach(k=>need.add(k));if(can('clients'))need.add('clients');if(can('employees'))need.add('employees');if(can('services'))need.add('services');if(can('fin'))need.add('tx');
+ need.forEach(k=>subs.push(col(k).onSnapshot(sn=>{D[k]=sn.docs.map(d=>({id:d.id,...d.data()}));if(k==='services')syncPublic();render()},e=>toast('Erro: '+e.message))));
+ if(!STAFF)subs.push(db.collection('invites').where('company','==',CID).onSnapshot(sn=>{D.users=sn.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{}));
+ if(isAdmin)subs.push(db.collection('companies').onSnapshot(sn=>{D.cos=sn.docs.map(d=>d.data());render()}));
  render()}
 db.collection('announcements').orderBy('createdAt','desc').limit(20).onSnapshot(s=>{
  D.ann=s.docs.map(d=>({id:d.id,...d.data()}));
  if(U)render();else{const b=$('#annbox');if(b)b.innerHTML=annHTML()}},()=>{});
-auth.onAuthStateChanged(u=>{if(!reg)boot(u)});
+const BOOK=new URLSearchParams(location.search).get('agendar');
+if(BOOK)renderBooking(BOOK);else auth.onAuthStateChanged(u=>{if(!reg)boot(u)});
 </script>
 </body>
 </html>

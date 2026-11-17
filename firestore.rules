@@ -7,25 +7,86 @@ service cloud.firestore {
       return logado() &&
         exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
+    function dono(cid) { return logado() && request.auth.uid == cid; }
 
-    // Admin do portal: o documento admins/{seuUID} é criado manualmente no console
+    // Usuário administrativo: convite criado pela empresa (documento = e-mail em minúsculas)
+    function emailConv() { return request.auth.token.email.lower(); }
+    function convOk() {
+      return logado() && request.auth.token.email_verified == true &&
+        exists(/databases/$(database)/documents/invites/$(emailConv()));
+    }
+    function conv() {
+      return get(/databases/$(database)/documents/invites/$(emailConv())).data;
+    }
+    function equipe(cid) { return convOk() && conv().company == cid; }
+    function perm(cid, k) { return equipe(cid) && conv().perms.get(k, false) == true; }
+
+    // Solicitação feita por cliente na página pública de agendamento
+    function reqOk(cid) {
+      let d = request.resource.data;
+      return exists(/databases/$(database)/documents/public/$(cid)) &&
+        get(/databases/$(database)/documents/public/$(cid)).data.enabled == true &&
+        d.keys().hasOnly(['name','phone','email','addr','svc','svcName','date','time','obs','status','createdAt']) &&
+        d.name is string && d.name.size() > 0 && d.name.size() <= 80 &&
+        d.phone is string && d.phone.size() <= 20 &&
+        d.email is string && d.email.size() <= 80 &&
+        d.addr is string && d.addr.size() <= 140 &&
+        d.obs is string && d.obs.size() <= 300 &&
+        d.svc is string && d.svcName is string && d.svcName.size() <= 100 &&
+        d.date is string && d.date.size() == 10 &&
+        d.time is string && d.time.size() == 5 &&
+        d.status == 'new' && d.createdAt == request.time;
+    }
+
     match /admins/{uid} {
       allow read: if logado() && request.auth.uid == uid;
     }
 
-    // Mural da tela inicial: todos leem, só o admin publica
     match /announcements/{id} {
       allow read: if true;
       allow write: if admin();
     }
 
-    // Cada empresa só acessa os próprios dados
-    match /companies/{cid} {
-      allow read: if logado() && (request.auth.uid == cid || admin());
-      allow create, update: if logado() && request.auth.uid == cid;
+    // Dados públicos da empresa para a página de agendamento
+    match /public/{cid} {
+      allow read: if true;
+      allow write: if dono(cid);
+    }
 
-      match /{sub}/{doc} {
-        allow read, write: if logado() && request.auth.uid == cid;
+    match /invites/{em} {
+      allow get: if logado() && request.auth.token.email != null && request.auth.token.email.lower() == em;
+      allow list: if logado() && resource.data.company == request.auth.uid;
+      allow create: if dono(request.resource.data.company);
+      allow update: if dono(resource.data.company) && dono(request.resource.data.company);
+      allow delete: if dono(resource.data.company);
+    }
+
+    match /companies/{cid} {
+      allow read: if dono(cid) || admin() || equipe(cid);
+      allow create, update: if dono(cid);
+
+      match /appts/{d} {
+        allow read, write: if dono(cid) || perm(cid, 'agenda');
+      }
+      match /requests/{d} {
+        allow read, update, delete: if dono(cid) || perm(cid, 'agenda');
+        allow create: if dono(cid) || perm(cid, 'agenda') || reqOk(cid);
+      }
+      match /clients/{d} {
+        allow read: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
+        allow create: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
+        allow update, delete: if dono(cid) || perm(cid, 'clients');
+      }
+      match /employees/{d} {
+        allow read: if dono(cid) || perm(cid, 'employees') || perm(cid, 'agenda');
+        allow write: if dono(cid) || perm(cid, 'employees');
+      }
+      match /services/{d} {
+        allow read: if dono(cid) || perm(cid, 'services') || perm(cid, 'agenda');
+        allow write: if dono(cid) || perm(cid, 'services');
+      }
+      match /tx/{d} {
+        allow read, write: if dono(cid) || perm(cid, 'fin');
       }
     }
   }
