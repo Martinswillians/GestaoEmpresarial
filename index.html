@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Portal de Gestão Empresarial</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root{--p:#6b2a6f;--p2:#4d1e51;--pl:#6b2a6f;--t:#7aa5b8;--k:#d79bb4;--bg:#f7f2f8;--card:#fff;--tx:#2a2030;--mu:#6f6577;--bd:#e5dbe7;--ok:#2e7d4f;--er:#b83a2e}
+@media(prefers-color-scheme:dark){:root{--pl:#e3adc6;--bg:#171119;--card:#221a25;--tx:#f1eaf3;--mu:#a99bb0;--bd:#3a2d3e;--ok:#5cc58a;--er:#ff8a7a}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+h1,h3{font-family:Fraunces,Georgia,serif;margin:0 0 8px}
+header{background:var(--p);color:#fff;padding:calc(12px + env(safe-area-inset-top)) 16px 12px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5;border-bottom:4px solid var(--k)}
+header b{font-family:Fraunces,Georgia,serif;font-size:18px}header small{display:block;opacity:.8}
+main{max-width:720px;margin:0 auto;padding:14px 14px 90px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;background:var(--card);border-top:1px solid var(--bd);padding-bottom:env(safe-area-inset-bottom);z-index:5}
+nav button{flex:1;border:0;background:none;color:var(--mu);padding:14px 2px 12px;font-size:13px;border-top:3px solid transparent;margin-top:-1px}
+nav .on{color:var(--pl);border-top-color:var(--pl);font-weight:700}
+button{font:inherit;cursor:pointer}
+.card,.ann{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:14px;margin-bottom:12px}
+.ann{border-left:5px solid var(--t)}.ann.alerta{border-left-color:#e0a100}.ann.publicidade{border-left-color:var(--k)}
+.ann p{margin:4px 0 0;white-space:pre-line}
+.row{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)}
+.row:last-child{border:0}.row small{display:block;color:var(--mu)}
+.tag{font-size:12px;background:var(--bd);border-radius:20px;padding:2px 9px}.tag.ok{color:var(--ok)}
+.btn{background:var(--p);color:#fff;border:0;border-radius:10px;padding:10px 16px;font-weight:600}
+.ghost{background:none;border:1px solid var(--bd);color:inherit;border-radius:10px;padding:8px 12px}
+header .ghost{color:#fff;border-color:#fff7}
+.acts{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}.acts button{border:0;background:var(--bg);color:var(--tx);border-radius:8px;padding:6px 9px;font-size:13px}
+label{display:block;font-size:13px;color:var(--mu);margin:10px 0}
+input,select,textarea{display:block;width:100%;margin-top:4px;padding:10px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+fieldset{border:1px solid var(--bd);border-radius:10px;margin:10px 0}legend{color:var(--mu);font-size:13px}
+.chk{display:flex;align-items:center;gap:8px;color:var(--tx)}.chk input{width:auto;margin:0}
+.ov{position:fixed;inset:0;background:#0008;display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet{background:var(--card);width:100%;max-width:560px;max-height:90vh;overflow:auto;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom))}
+.sheet .btn,.sheet .ghost{flex:1}.sheet .end{display:flex;gap:8px;margin-top:12px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.kpis div{background:var(--bg);border-radius:10px;padding:10px;text-align:center;font-size:13px;color:var(--mu)}.kpis b{display:block;font-size:16px;color:var(--tx)}
+.auth{max-width:420px;margin:0 auto;padding:calc(28px + env(safe-area-inset-top)) 16px}
+.brand{margin-bottom:16px}.brand h1{font-size:28px;color:var(--pl)}.brand p{margin:0;color:var(--mu)}
+.seg{display:flex;gap:6px}.seg button{flex:1;padding:9px;border:1px solid var(--bd);background:none;border-radius:10px;color:var(--tx)}.seg .on{background:var(--p);color:#fff;border-color:var(--p)}
+.bar{display:flex;gap:8px;justify-content:space-between;align-items:center;margin-bottom:12px}.bar input{width:auto;margin:0}
+.receita{color:var(--ok)}.despesa{color:var(--er)}.err{color:var(--er);min-height:1em}.mu{color:var(--mu)}
+a{color:var(--pl)}
+#toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:30;max-width:90%}#toast.show{opacity:1}
+</style>
+</head>
+<body>
+<div id="app"></div><div id="modal"></div><div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-app-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-auth-compat.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/firebase@10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey:"AIzaSyD2sGz7nS2TxLQPSRcl0GpCY22O5DCxI-A",
+  authDomain:"gestaoempresarial-41a31.firebaseapp.com",
+  projectId:"gestaoempresarial-41a31",
+  storageBucket:"gestaoempresarial-41a31.firebasestorage.app",
+  messagingSenderId:"102727456743",
+  appId:"1:102727456743:web:5aa4cf5151df18fda70f42"
+});
+const auth=firebase.auth(),db=firebase.firestore(),TS=()=>firebase.firestore.FieldValue.serverTimestamp();
+const $=s=>document.querySelector(s);
+let U=null,CO=null,isAdmin=false,tab='home',reg=false,mode='login',subs=[];
+const D={employees:[],clients:[],appts:[],tx:[],ann:[],cos:[]};
+const R=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const p2=n=>String(n).padStart(2,'0');
+const ymd=d=>d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
+const dbr=s=>s?s.split('-').reverse().join('/'):'';
+const today=()=>ymd(new Date());
+let mon=today().slice(0,7);
+const toast=m=>{const t=$('#toast');t.textContent=m;t.className='show';setTimeout(()=>t.className='',2800)};
+const col=k=>k==='ann'?db.collection('announcements'):db.collection(`companies/${U.uid}/${k}`);
+const sum=(t,ty)=>t.filter(x=>x.type===ty).reduce((s,x)=>s+(+x.amount||0),0);
+const cmpA=(a,b)=>(a.date+a.time).localeCompare(b.date+b.time);
+const endT=(t,h)=>{const m=(+t.slice(0,2))*60+(+t.slice(3,5))+Math.round(h*60);return p2(Math.floor(m/60)%24)+':'+p2(m%60)};
+const nextDate=(d,f)=>{const x=new Date(d+'T12:00');if(f==='Semanal')x.setDate(x.getDate()+7);else if(f==='Quinzenal')x.setDate(x.getDate()+14);else if(f==='Mensal')x.setMonth(x.getMonth()+1);else return null;return ymd(x)};
+const ERR={'auth/invalid-credential':'E-mail ou senha incorretos.','auth/invalid-email':'E-mail inválido.','auth/email-already-in-use':'Este e-mail já está cadastrado. Use "Entrar".','auth/weak-password':'A senha precisa ter pelo menos 6 caracteres.','auth/too-many-requests':'Muitas tentativas. Tente novamente em alguns minutos.'};
+
+/* ---------- Esquemas dos formulários ---------- */
+const DUR=[];for(let h=1;h<=10;h+=.5)DUR.push([h,h+'h']);
+const SCH={
+ clients:{t:'cliente',f:()=>[['name','Nome','text'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['obs','Observações','textarea']]},
+ employees:{t:'funcionário(a)',f:()=>[['name','Nome','text'],['role','Função','select',['Líder','Novato(a)']],['phone','Telefone','tel'],['obs','Observações','text']]},
+ appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['emps','Equipe','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
+ tx:{t:'lançamento',def:{date:today(),type:'despesa'},f:()=>[['type','Tipo','select',[['receita','Receita'],['despesa','Despesa']]],['desc','Descrição','text'],['amount','Valor (R$)','number'],['date','Data','date']]},
+ ann:{t:'publicação',f:()=>[['type','Tipo','select',[['novidade','Novidade'],['alerta','Alerta'],['publicidade','Publicidade']]],['title','Título','text'],['text','Texto','textarea']]}
+};
+function fld(n,l,t,op,v){
+ if(t==='emps')return`<fieldset><legend>${l}</legend>${D.employees.map(e=>`<label class="chk"><input type="checkbox" name="${n}" value="${e.id}" ${(v||[]).includes(e.id)?'checked':''}> ${esc(e.name)} <small>(${esc(e.role)})</small></label>`).join('')||'<small>Cadastre funcionários na aba Equipe.</small>'}</fieldset>`;
+ let i;
+ if(t==='select')i=`<select name="${n}">${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
+ else if(t==='textarea')i=`<textarea name="${n}" rows="3">${esc(v)}</textarea>`;
+ else i=`<input name="${n}" type="${t}" value="${esc(v)}" ${t==='number'?'step="0.01" min="0" inputmode="decimal"':''} ${['name','title','date','time','desc'].includes(n)?'required':''}>`;
+ return`<label>${l}${i}</label>`}
+function edit(k,id){
+ if(k==='appts'&&!D.clients.length)return toast('Cadastre um cliente antes de agendar.');
+ const S=SCH[k],o=id?D[k].find(x=>x.id===id):(S.def||{});
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n])).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`}
+const closeM=()=>$('#modal').innerHTML='';
+async function save(e,k,id){
+ e.preventDefault();const F=e.target,d={};
+ SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
+ if(k==='appts'&&!id)d.status='pending';
+ if(!id)d.createdAt=TS();
+ try{id?await col(k).doc(id).update(d):await col(k).add(d);closeM()}catch(x){toast('Não foi possível salvar: '+x.message)}
+ return false}
+async function del(k,id){if(!confirm('Excluir este item?'))return;try{await col(k).doc(id).delete()}catch(x){toast(x.message)}}
+
+/* ---------- Atendimentos ---------- */
+async function done(id){
+ const a=D.appts.find(x=>x.id===id),cl=D.clients.find(c=>c.id===a.client),n=cl?cl.name:'Cliente',b=db.batch(),base=`companies/${U.uid}/`;
+ b.update(db.doc(base+'appts/'+id),{status:'done'});
+ if(a.price>0)b.set(db.collection(base+'tx').doc(),{type:'receita',desc:'Limpeza - '+n,amount:a.price,date:a.date,appt:id,createdAt:TS()});
+ if(a.uber>0)b.set(db.collection(base+'tx').doc(),{type:'despesa',desc:'Uber (deslocamento) - '+n,amount:a.uber,date:a.date,appt:id,createdAt:TS()});
+ const nx=nextDate(a.date,a.freq);
+ if(nx){const{id:_,...r}=a;b.set(db.collection(base+'appts').doc(),{...r,date:nx,status:'pending',createdAt:TS()})}
+ try{await b.commit();toast('Atendimento concluído.'+(nx?' Próximo agendado para '+dbr(nx)+'.':''))}catch(x){toast(x.message)}}
+function apptRow(a){
+ const cl=D.clients.find(c=>c.id===a.client),em=(a.emps||[]).map(i=>(D.employees.find(e=>e.id===i)||{}).name).filter(Boolean).join(', ');
+ return`<div class="row"><div><b>${dbr(a.date)}, ${a.time} às ${endT(a.time,a.dur)}</b><div>${esc(cl?cl.name:'Cliente removido')} <span class="tag">${a.freq}</span></div><small>${a.dur}h &middot; ${esc(em||'sem equipe')} &middot; ${R(a.price)} &middot; Uber ${R(a.uber)}</small></div><div class="acts">${a.status==='done'?'<span class="tag ok">Concluído</span>':`<button onclick="done('${a.id}')">Concluir</button>`}<button onclick="edit('appts','${a.id}')">Editar</button><button onclick="del('appts','${a.id}')">Excluir</button></div></div>`}
+
+/* ---------- Financeiro ---------- */
+const txM=()=>D.tx.filter(x=>(x.date||'').startsWith(mon)).sort((a,b)=>b.date.localeCompare(a.date));
+const Rp=n=>R(n).replace(/\u00a0/g,' ');
+function expXLS(){const r=txM().map(x=>({Data:dbr(x.date),Tipo:x.type==='receita'?'Receita':'Despesa','Descrição':x.desc,Valor:x.amount}));
+ const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(r),'Financeiro');XLSX.writeFile(wb,`financeiro-${mon}.xlsx`)}
+function expPDF(){const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa'),pdf=new jspdf.jsPDF();
+ pdf.setFontSize(14);pdf.text(`${CO.name} - Financeiro ${mon.split('-').reverse().join('/')}`,14,16);
+ pdf.autoTable({startY:22,head:[['Data','Tipo','Descricao','Valor']],body:t.map(x=>[dbr(x.date),x.type==='receita'?'Receita':'Despesa',x.desc,Rp(x.amount)]),foot:[['','','Receitas',Rp(r)],['','','Despesas',Rp(d)],['','','Saldo',Rp(r-d)]],headStyles:{fillColor:[107,42,111]},footStyles:{fillColor:[230,220,232],textColor:30}});
+ pdf.save(`financeiro-${mon}.pdf`)}
+
+/* ---------- Telas ---------- */
+const annHTML=()=>D.ann.map(a=>`<div class="ann ${a.type}"><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><p>${esc(a.text)}</p></div>`).join('');
+const VIEW={
+ home:()=>{const t=D.tx.filter(x=>(x.date||'').startsWith(today().slice(0,7))),r=sum(t,'receita'),d=sum(t,'despesa'),nx=D.appts.filter(a=>a.status!=='done'&&a.date>=today()).sort(cmpA).slice(0,4);
+  return annHTML()+`<section class="card"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a aba Agenda para criar o primeiro.</p>'}</section>`},
+ agenda:()=>{const p=D.appts.filter(a=>a.status!=='done').sort(cmpA),h=D.appts.filter(a=>a.status==='done').sort((a,b)=>cmpA(b,a)).slice(0,10);
+  return`<div class="bar"><h3>Agenda</h3><button class="btn" onclick="edit('appts')">Novo atendimento</button></div><section class="card">${p.map(apptRow).join('')||'<p class="mu">Nada pendente.</p>'}</section>${h.length?`<h3>Concluídos</h3><section class="card">${h.map(apptRow).join('')}</section>`:''}`},
+ clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')}</small></div><div class="acts"><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
+ employees:()=>`<div class="bar"><h3>Equipe</h3><button class="btn" onclick="edit('employees')">Novo funcionário</button></div><section class="card">${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
+ fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
+  return`<div class="bar"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="btn" onclick="edit('tx')">Novo lançamento</button></div><div class="card"><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></div><div class="bar"><span class="mu">Exportar este mês</span><span class="acts"><button class="ghost" onclick="expPDF()">PDF</button><button class="ghost" onclick="expXLS()">Excel</button></span></div><section class="card">${t.map(x=>`<div class="row"><div><b>${esc(x.desc)}</b><small>${dbr(x.date)}</small></div><b class="${x.type}">${x.type==='despesa'?'-':'+'}${R(x.amount)}</b><div class="acts"><button onclick="del('tx','${x.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Sem lançamentos neste mês.</p>'}</section>`},
+ admin:()=>`<div class="bar"><h3>Mural do portal</h3><button class="btn" onclick="edit('ann')">Nova publicação</button></div><section class="card">${D.ann.map(a=>`<div class="row"><div><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><small>${esc(a.text)}</small></div><div class="acts"><button onclick="del('ann','${a.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhuma publicação.</p>'}</section><section class="card"><h3>Empresas cadastradas (${D.cos.length})</h3>${D.cos.map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.segment||'')} &middot; ${esc(c.email||'')}</small></div></div>`).join('')}</section>`
+};
+const TABS=[['home','Início'],['agenda','Agenda'],['clients','Clientes'],['employees','Equipe'],['fin','Financeiro']];
+const go=t=>{tab=t;render();scrollTo(0,0)};
+function render(){
+ if(!U||!CO)return;
+ const tabs=isAdmin?[...TABS,['admin','Admin']]:TABS;
+ $('#app').innerHTML=`<header><div><b>${esc(CO.name)}</b><small>${esc(CO.segment||'')}</small></div><button class="ghost" onclick="auth.signOut()">Sair</button></header><main>${VIEW[tab]()}</main><nav>${tabs.map(([k,l])=>`<button class="${tab===k?'on':''}" onclick="go('${k}')">${l}</button>`).join('')}</nav>`}
+
+/* ---------- Login e cadastro ---------- */
+function renderAuth(){
+ $('#app').innerHTML=`<div class="auth"><div class="brand"><h1>Portal de Gestão Empresarial</h1><p>Agenda, clientes, equipe e financeiro da sua empresa em um só lugar.</p></div><div id="annbox">${annHTML()}</div>
+ <form class="card" onsubmit="return doAuth(event)"><div class="seg"><button type="button" class="${mode==='login'?'on':''}" onclick="mode='login';renderAuth()">Entrar</button><button type="button" class="${mode==='reg'?'on':''}" onclick="mode='reg';renderAuth()">Cadastrar empresa</button></div>
+ ${mode==='reg'?`<label>Nome da empresa<input name="name" required></label><label>Segmento<select name="seg"><option>Limpeza residencial</option><option>Outro</option></select></label>`:''}
+ <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
+ <label>Senha<input name="pw" type="password" minlength="6" required autocomplete="${mode==='login'?'current-password':'new-password'}"></label>
+ <label class="chk"><input type="checkbox" name="keep" checked> Manter conectado neste dispositivo</label>
+ <button class="btn" style="width:100%">${mode==='login'?'Entrar':'Criar conta'}</button><p id="err" class="err"></p>
+ ${mode==='login'?'<a href="#" onclick="return resetPw()">Esqueci minha senha</a>':''}</form></div>`}
+async function doAuth(e){
+ e.preventDefault();const f=new FormData(e.target),em=f.get('email'),pw=f.get('pw');
+ try{
+  await auth.setPersistence(f.get('keep')?firebase.auth.Auth.Persistence.LOCAL:firebase.auth.Auth.Persistence.SESSION);
+  if(mode==='login')await auth.signInWithEmailAndPassword(em,pw);
+  else{reg=true;const c=await auth.createUserWithEmailAndPassword(em,pw);
+   await db.doc('companies/'+c.user.uid).set({name:f.get('name'),segment:f.get('seg'),email:em,createdAt:TS()});reg=false;boot(c.user)}
+ }catch(x){reg=false;$('#err').textContent=ERR[x.code]||x.message}
+ return false}
+async function resetPw(){const em=document.querySelector('input[name=email]').value;if(!em){toast('Digite seu e-mail primeiro.');return false}
+ try{await auth.sendPasswordResetEmail(em);toast('Enviamos um link para redefinir a senha.')}catch(x){toast(ERR[x.code]||x.message)}return false}
+
+/* ---------- Inicialização ---------- */
+async function boot(u){
+ subs.forEach(f=>f());subs=[];U=u;
+ if(!u){CO=null;isAdmin=false;tab='home';return renderAuth()}
+ try{const s=await db.doc('companies/'+u.uid).get();CO=s.exists?s.data():{name:u.email,segment:''};isAdmin=(await db.doc('admins/'+u.uid).get()).exists}
+ catch(x){CO={name:u.email,segment:''};toast(x.message)}
+ ['employees','clients','appts','tx'].forEach(k=>subs.push(col(k).onSnapshot(s=>{D[k]=s.docs.map(d=>({id:d.id,...d.data()}));render()},e=>toast('Erro: '+e.message))));
+ if(isAdmin)subs.push(db.collection('companies').onSnapshot(s=>{D.cos=s.docs.map(d=>d.data());render()}));
+ render()}
+db.collection('announcements').orderBy('createdAt','desc').limit(20).onSnapshot(s=>{
+ D.ann=s.docs.map(d=>({id:d.id,...d.data()}));
+ if(U)render();else{const b=$('#annbox');if(b)b.innerHTML=annHTML()}},()=>{});
+auth.onAuthStateChanged(u=>{if(!reg)boot(u)});
+</script>
+</body>
+</html>
