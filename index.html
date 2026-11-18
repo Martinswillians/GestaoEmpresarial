@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Portal de Gestão Empresarial</title>
+<!-- v7: período/equipe no dashboard, agenda Dia/Semana/Mês, sininho, pares de equipe, contratos -->
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&display=swap" rel="stylesheet">
 <style>
 :root{--p:#6b2a6f;--p2:#4d1e51;--pl:#6b2a6f;--t:#7aa5b8;--k:#d79bb4;--bg:#f7f2f8;--card:#fff;--tx:#2a2030;--mu:#6f6577;--bd:#e5dbe7;--ok:#2e7d4f;--er:#b83a2e}
@@ -75,6 +76,25 @@ a{color:var(--pl)}
 .lg{display:block;max-height:64px;max-width:200px;margin:6px 0 10px;border-radius:8px;background:#fff}
 .avl{width:40px;height:40px;object-fit:contain;border-radius:8px;background:#fff;flex:none}
 .nb{background:#e07b00;color:#fff;font-size:10px;font-weight:700;padding:1px 7px;border-radius:999px;margin-left:auto}
+.tag.er{color:var(--er)}.tag.wn{color:#c77700}.xx{opacity:.55}
+.pw{position:relative}.bdg{position:absolute;top:3px;right:1px;background:#e07b00;color:#fff;font:700 10px/16px system-ui;min-width:16px;height:16px;border-radius:999px;text-align:center;padding:0 4px}
+.seg.sm{display:inline-flex}.seg.sm button{flex:none;padding:7px 14px}
+.who{width:auto;margin:0;max-width:100%}
+.il{display:flex;align-items:center;gap:6px;margin:0;color:var(--mu)}.il input{width:auto;margin:0}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}.chip2{display:flex;align-items:center;gap:6px;border:1px solid var(--bd);background:var(--card);border-radius:10px;padding:6px 12px;font-size:13px;color:var(--mu)}.chip2 b{color:var(--tx)}.chip2 i{width:8px;height:8px;border-radius:50%;display:block}.chip2 .g{background:var(--ok)}.chip2 .p{background:var(--p)}
+.agl{min-width:150px;text-align:center}
+.wg{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:12px;align-items:start}.wg.one{grid-template-columns:1fr}
+.dc{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:10px;min-width:0}.dc.td{border-color:var(--pl)}
+.dh{display:flex;justify-content:space-between;align-items:baseline;color:var(--mu);font-size:12px;margin-bottom:8px;text-transform:uppercase}.dh b{font-size:16px;color:var(--tx)}
+.fr{color:var(--ok);font-size:12px;text-align:center;padding:8px 0}
+.ac{border-left:3px solid var(--p);background:var(--bg);border-radius:8px;padding:6px 8px;margin-bottom:6px;cursor:pointer;font-size:13px}.ac small{display:block;color:var(--mu);font-size:11px}.ac.done{border-left-color:var(--ok)}.ac.canceled{border-left-color:var(--er);opacity:.55}.ac .st.ok{color:var(--ok)}.ac .st.er{color:var(--er)}
+.add{width:100%;background:none;border:1px dashed var(--bd);color:var(--mu);border-radius:8px;padding:5px;font-size:12px}
+.mg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px;margin-bottom:12px}.mh{text-align:center;color:var(--mu);font-size:12px}
+.mc{min-height:84px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;padding:6px;text-align:left;display:flex;flex-direction:column;gap:3px;align-items:stretch;min-width:0;overflow:hidden}.mc.out{border:0;background:none;cursor:default}.mc.td{border-color:var(--pl)}.mc b{font-size:12px}.mc .fr{padding:0;text-align:left}
+.chip{font-size:11px;background:var(--bg);border-radius:6px;padding:1px 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-left:2px solid var(--p)}
+.cnt{display:none}
+.tw{overflow-x:auto}.tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{text-align:left;color:var(--mu);font-size:11px;text-transform:uppercase;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}.tb td{padding:9px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}.tb tr.xx{opacity:.55}.tb .acts{flex-wrap:nowrap;justify-content:flex-start}.tb .acts button{white-space:nowrap}
+@media(max-width:700px){.mc{min-height:58px;align-items:center}.mc .chip{display:none}.mc .fr{font-size:10px}.mc .cnt{display:grid;place-items:center;background:var(--p);color:#fff;border-radius:999px;font-size:11px;min-width:20px;height:20px}}
 </style>
 </head>
 <body>
@@ -98,7 +118,7 @@ firebase.initializeApp({
 const auth=firebase.auth(),db=firebase.firestore(),TS=()=>firebase.firestore.FieldValue.serverTimestamp();
 const $=s=>document.querySelector(s);
 let U=null,CO=null,isAdmin=false,tab='home',reg=false,mode='login',subs=[];
-const D={employees:[],clients:[],appts:[],tx:[],services:[],reqs:[],users:[],ann:[],cos:[]};
+const D={teams:[],employees:[],clients:[],appts:[],tx:[],services:[],reqs:[],users:[],ann:[],cos:[]};
 const R=n=>(+n||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'});
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const p2=n=>String(n).padStart(2,'0');
@@ -139,37 +159,58 @@ applyTheme();
 /* ---------- Esquemas dos formulários ---------- */
 const DUR=[];for(let h=1;h<=10;h+=.5)DUR.push([h,h+'h']);
 const SCH={
- clients:{t:'cliente',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do cliente)','email'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['plan','Plano de limpeza','select',['Avulso','Semanal','Quinzenal','Mensal']],['days','Dias da limpeza','days'],['obs','Observações','textarea']]},
+ clients:{t:'cliente',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do cliente)','email'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['plan','Plano de limpeza','select',['Avulso','Semanal','Quinzenal','Mensal']],['days','Dias da limpeza','days'],['contract','Contrato','contract'],['obs','Observações','textarea']]},
  employees:{t:'funcionário(a)',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do profissional)','email'],['role','Função','select',['Líder','Novato(a)']],['phone','Telefone','tel'],['obs','Observações','text']]},
- appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['service','Tipo de serviço','select',[['','Selecione...'],...D.services.map(s=>[s.id,s.name])]],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['emps','Equipe','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
+ appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['service','Tipo de serviço','select',[['','Selecione...'],...D.services.map(s=>[s.id,s.name])]],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['team','Par de equipe','select',[['','Selecionar par...'],...D.teams.map(t=>[t.id,tName(t)])]],['emps','Equipe (pessoas)','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
+ teams:{t:'par de equipe',f:()=>[['pname','Nome do par (opcional)','text'],['leader','Líder','select',[['','Selecione...'],...D.employees.filter(e=>e.role==='Líder').map(e=>[e.id,e.name])]],['rookie','Novato(a)','select',[['','Selecione...'],...D.employees.filter(e=>e.role!=='Líder').map(e=>[e.id,e.name])]],['obs','Observações','text']]},
  tx:{t:'lançamento',def:{date:today(),type:'despesa'},f:()=>[['type','Tipo','select',[['receita','Receita'],['despesa','Despesa']]],['desc','Descrição','text'],['amount','Valor (R$)','number'],['date','Data','date']]},
  services:{t:'tipo de serviço',def:{dur:4},f:()=>[['name','Nome do serviço','text'],['dur','Duração padrão','select',DUR],['price','Valor padrão (R$)','number'],['obs','Observações','text']]},
  users:{t:'usuário administrativo',f:()=>[['name','Nome','text'],['email','E-mail do usuário (o mesmo do convite)','email'],['perms','Permissões de acesso','perms']]},
  ann:{t:'publicação',f:()=>[['type','Tipo','select',[['novidade','Novidade'],['alerta','Alerta'],['publicidade','Publicidade']]],['title','Título','text'],['text','Texto','textarea']]}
 };
-function fld(n,l,t,op,v){
+function fld(n,l,t,op,v,o){o=o||{};
  if(t==='emps')return`<fieldset><legend>${l}</legend>${D.employees.map(e=>`<label class="chk"><input type="checkbox" name="${n}" value="${e.id}" ${(v||[]).includes(e.id)?'checked':''}> ${esc(e.name)} <small>(${esc(e.role)})</small></label>`).join('')||'<small>Cadastre funcionários na aba Equipe.</small>'}</fieldset>`;
  if(t==='days')return`<fieldset><legend>${l}</legend><div class="wk">${WD.map((d,i)=>`<label class="chk"><input type="checkbox" name="${n}" value="${i}" ${(v||[]).includes(i)?'checked':''}> ${d}</label>`).join('')}</div></fieldset>`;
  if(t==='perms')return`<fieldset><legend>${l}</legend>${PERMS.map(([k,n])=>`<label class="chk"><input type="checkbox" name="perms" value="${k}" ${(v||{})[k]?'checked':''}> ${n}</label>`).join('')}<small class="mu">O painel inicial sempre fica disponível.</small></fieldset>`;
+ if(t==='contract')return ctrHTML(o,l);
  let i;
- if(t==='select')i=`<select name="${n}"${n==='client'?' onchange="planFill(this)"':n==='service'?' onchange="svcFill(this)"':''}>${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
+ if(t==='select')i=`<select name="${n}"${n==='client'?' onchange="planFill(this)"':n==='service'?' onchange="svcFill(this)"':n==='team'?' onchange="teamFill(this)"':''}>${op.map(x=>{const[a,b]=Array.isArray(x)?x:[x,x];return`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`}).join('')}</select>`;
  else if(t==='textarea')i=`<textarea name="${n}" rows="3">${esc(v)}</textarea>`;
  else i=`<input name="${n}" type="${t}" value="${esc(v)}" ${t==='number'?'step="0.01" min="0" inputmode="decimal"':''} ${['name','title','date','time','desc'].includes(n)?'required':''}>`;
  return`<label>${l}${i}</label>`}
 function edit(k,id,pre){
  if(k==='appts'&&!D.clients.length)return toast('Cadastre um cliente antes de agendar.');
+ if(k==='teams'&&(!D.employees.some(e=>e.role==='Líder')||!D.employees.some(e=>e.role!=='Líder')))return toast('Cadastre ao menos um Líder e um Novato(a) na aba Equipe.');
  const S=SCH[k],o=id?D[k].find(x=>x.id===id):{...(S.def||{}),...(pre||{})};
- $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n])).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`;
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n],o)).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`;
  if(k==='users'&&id)$('#modal input[name=email]').readOnly=true}
 const closeM=()=>$('#modal').innerHTML='';
 async function save(e,k,id){
- e.preventDefault();const F=e.target,d={};
- SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else if(t==='perms'){d.perms={};PERMS.forEach(([k])=>d.perms[k]=!!F.querySelector('input[name="perms"][value="'+k+'"]:checked'))}else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
- if(k==='appts'&&!id)d.status='pending';
+ e.preventDefault();const F=e.target,d={};let gen=false;
+ SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else if(t==='perms'){d.perms={};PERMS.forEach(([k])=>d.perms[k]=!!F.querySelector('input[name="perms"][value="'+k+'"]:checked'))}
+  else if(t==='contract'){const g=x=>F.elements[x];d.contract=g('cOn').checked;d.cStart=g('cStart').value;d.cMonths=+g('cMonths').value||1;d.cTime=g('cTime').value;d.cDur=parseFloat(g('cDur').value)||4;d.cService=g('cService').value;d.cTeam=g('cTeam').value;d.cPrice=parseFloat(g('cPrice').value)||0;d.cUber=parseFloat(g('cUber').value)||0;gen=g('cGen').checked}
+  else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
+ if(k==='appts'){if(!id)d.status='pending';const tm=D.teams.find(x=>x.id===d.team);if(tm&&!(d.emps.includes(tm.leader)&&d.emps.includes(tm.rookie)))d.team=''}
+ if(k==='teams'){if(!d.leader||!d.rookie){toast('Escolha um Líder e um Novato(a) para formar o par.');return false}d.pname=(d.pname||'').trim()||tName(d)}
+ if(k==='clients'){
+  if(d.contract){
+   if(!d.plan||d.plan==='Avulso'||!(d.days||[]).length||!d.cStart){toast('Para o contrato, escolha o plano (Semanal, Quinzenal ou Mensal), os dias da limpeza e a data de início.');return false}
+   if(gen&&!can('agenda')){toast('Você não tem permissão para alterar a agenda.');return false}
+   d.cGenerated=gen||!!(id&&(D.clients.find(x=>x.id===id)||{}).cGenerated)
+  }else gen=false}
  if(!id)d.createdAt=TS();
- try{if(k==='users'){const em=(id||d.email||'').trim().toLowerCase();if(!em){toast('Informe o e-mail.');return false}await col(k).doc(em).set({...d,email:em,company:CID},{merge:true})}else id?await col(k).doc(id).update(d):await col(k).add(d);closeM()}catch(x){toast('Não foi possível salvar: '+x.message)}
+ try{
+  if(k==='users'){const em=(id||d.email||'').trim().toLowerCase();if(!em){toast('Informe o e-mail.');return false}await col(k).doc(em).set({...d,email:em,company:CID},{merge:true})}
+  else if(id)await col(k).doc(id).update(d);else{const r=await col(k).add(d);id=r.id}
+  closeM();if(gen)await genContract(id,d)
+ }catch(x){toast('Não foi possível salvar: '+x.message)}
  return false}
-async function del(k,id){if(!confirm('Excluir este item?'))return;try{await col(k).doc(id).delete()}catch(x){toast(x.message)}}
+async function del(k,id){
+ let msg='Excluir este item?',extra=[];
+ if(k==='employees'){extra=D.teams.filter(t=>t.leader===id||t.rookie===id);if(extra.length)msg='Este funcionário faz parte de '+extra.length+' par(es) de equipe, que também será(ão) excluído(s). Continuar?'}
+ if(k==='clients'){extra=D.appts.filter(a=>a.client===id&&a.status==='pending');if(extra.length)msg='Este cliente tem '+extra.length+' atendimento(s) pendente(s) na agenda, que também será(ão) excluído(s). Continuar?'}
+ if(!confirm(msg))return;
+ try{const b=db.batch();b.delete(col(k).doc(id));extra.forEach(x=>b.delete(col(k==='employees'?'teams':'appts').doc(x.id)));await b.commit()}catch(x){toast(x.message)}}
 
 /* ---------- Atendimentos ---------- */
 async function done(id){
@@ -180,9 +221,9 @@ async function done(id){
  const nx=nextDate(a.date,a.freq);
  if(nx){const{id:_,...r}=a;b.set(db.collection(base+'appts').doc(),{...r,date:nx,status:'pending',createdAt:TS()})}
  try{await b.commit();toast('Atendimento concluído.'+(nx?' Próximo agendado para '+dbr(nx)+'.':''))}catch(x){toast(x.message)}}
-function apptRow(a){
- const cl=D.clients.find(c=>c.id===a.client),sv=D.services.find(s=>s.id===a.service),em=(a.emps||[]).map(i=>(D.employees.find(e=>e.id===i)||{}).name).filter(Boolean).join(', ');
- return`<div class="row"><div><b>${dbr(a.date)}, ${a.time} às ${endT(a.time,a.dur)}</b><div>${esc(cl?cl.name:'Cliente removido')} <span class="tag">${a.freq}</span>${sv?` <span class="tag">${esc(sv.name)}</span>`:''}</div><small>${a.dur}h &middot; ${esc(em||'sem equipe')} &middot; ${R(a.price)} &middot; Uber ${R(a.uber)}</small></div><div class="acts">${a.status==='done'?'<span class="tag ok">Concluído</span>':`<button onclick="done('${a.id}')">Concluir</button>`}<button onclick="edit('appts','${a.id}')">Editar</button><button onclick="del('appts','${a.id}')">Excluir</button></div></div>`}
+const apptActs=(a,tag=true)=>(a.status==='done'?(tag?'<span class="tag ok">Concluído</span>':''):a.status==='canceled'?`${tag?'<span class="tag er">Desmarcado</span>':''}<button onclick="reopen('${a.id}')">Reativar</button>`:`<button onclick="done('${a.id}')">Concluir</button><button onclick="postpone('${a.id}')">Adiar</button><button onclick="cancelAp('${a.id}')">Desmarcar</button>`)+`<button onclick="edit('appts','${a.id}')">Editar</button><button onclick="del('appts','${a.id}')">Excluir</button>`;
+function apptRow(a){const c=aCl(a),s=aSv(a),em=aEm(a);
+ return`<div class="row ${a.status==='canceled'?'xx':''}"><div><b>${dbr(a.date)}, ${a.time} às ${endT(a.time,a.dur)}</b><div>${esc(c.name||'Cliente removido')} <span class="tag">${esc(a.freq||'Avulso')}</span>${s.name?` <span class="tag">${esc(s.name)}</span>`:''}${a.movedFrom&&a.movedFrom!==a.date?` <span class="tag wn">adiado de ${dbr(a.movedFrom)}</span>`:''}</div><small>${a.dur}h &middot; ${esc(em||'sem equipe')} &middot; ${R(a.price)} &middot; Uber ${R(a.uber)}</small></div><div class="acts">${apptActs(a)}</div></div>`}
 
 /* ---------- Financeiro ---------- */
 const txM=()=>D.tx.filter(x=>(x.date||'').startsWith(mon)).sort((a,b)=>b.date.localeCompare(a.date));
@@ -197,16 +238,21 @@ function expPDF(){const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa'),pdf=new js
 /* ---------- Telas ---------- */
 const annHTML=()=>D.ann.map(a=>`<div class="ann ${a.type}"><span class="tag">${esc(a.type)}</span> <b>${esc(a.title)}</b><p>${esc(a.text)}</p></div>`).join('');
 const VIEW={
- home:()=>{const t=D.tx.filter(x=>(x.date||'').startsWith(today().slice(0,7))),r=sum(t,'receita'),d=sum(t,'despesa'),nx=D.appts.filter(a=>a.status!=='done'&&a.date>today()).sort(cmpA).slice(0,4),hoje=D.appts.filter(a=>a.date===today()).sort(cmpA),nR=D.reqs.filter(q=>q.status==='new').length;
-  return hint()+annHTML()+`<div class="dash">${can('agenda')&&nR?`<section class="card full"><b>${nR} solicitação(ões) de agendamento aguardando.</b> <button class="btn" style="margin-left:8px" onclick="go('reqs')">Ver solicitações</button></section>`:''}${can('fin')?`<section class="card full"><h3>Resumo do mês</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section>`:''}${can('agenda')?`<section class="card"><div class="bar"><h3 style="margin:0">Agenda de hoje</h3><button class="ghost" onclick="shareDay(today())">Compartilhar</button></div>${hoje.map(apptRow).join('')||'<p class="mu">Nenhum atendimento hoje.</p>'}</section><section class="card"><h3>Próximos atendimentos</h3>${nx.map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a Agenda no menu para criar o primeiro.</p>'}</section>`:''}</div>`},
- agenda:()=>{const[y,m]=calM.split('-').map(Number),first=new Date(y,m-1,1).getDay(),n=new Date(y,m,0).getDate(),cnt={};
-  D.appts.forEach(a=>cnt[a.date]=(cnt[a.date]||0)+1);
-  let cells=WD.map(d=>`<div class="h">${d}</div>`).join('')+'<span></span>'.repeat(first);
-  for(let d=1;d<=n;d++){const k=calM+'-'+p2(d);cells+=`<button class="${k===selDay?'sel':''} ${k===today()?'td':''}" onclick="selDay='${k}';render()">${d}${cnt[k]?'<i></i>':''}</button>`}
-  const L=D.appts.filter(a=>a.date===selDay).sort(cmpA);
-  return`<div class="split"><div><div class="bar"><button class="ghost" onclick="calGo(-1)">&lsaquo;</button><h3 style="margin:0">${MESES[m-1]} ${y}</h3><button class="ghost" onclick="calGo(1)">&rsaquo;</button></div><section class="card"><div class="cal">${cells}</div></section></div><div><div class="bar"><h3 style="margin:0">${dbr(selDay)}</h3><span class="acts"><button class="ghost" onclick="shareDay('${selDay}')">Compartilhar</button><button class="btn" onclick="edit('appts','',{date:selDay})">Novo atendimento</button></span></div><section class="card">${L.map(apptRow).join('')||'<p class="mu">Nenhum atendimento neste dia.</p>'}</section></div></div>`},
- clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>`<div class="row"><div><b>${esc(c.name)}</b><small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')} ${esc(c.email||'')}</small><small>Plano ${esc(c.plan||'Avulso')}${c.days&&c.days.length?' &middot; '+c.days.map(i=>WD[i]).join(', '):''}</small></div><div class="acts"><button onclick="agendar('${c.id}')">Agendar</button><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
- employees:()=>`<div class="bar"><h3>Equipe</h3><button class="btn" onclick="edit('employees')">Novo funcionário</button></div><section class="card">${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.email||'')}</small><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
+ home:()=>{const[f,t]=rng(DS.mode,DS.a,DS.b),ym=DS.a.slice(0,7),tx=D.tx.filter(x=>(x.date||'').startsWith(ym)),r=sum(tx,'receita'),d=sum(tx,'despesa'),L=inR(f,t,DS.who).sort(cmpA),nx=D.appts.filter(a=>a.status==='pending'&&a.date>today()&&whoMatch(a,DS.who)).sort(cmpA),nR=D.reqs.filter(q=>q.status==='new').length,
+  ttl=f===t?(f===today()?'Agenda de hoje':'Agenda de '+dbr(f)):'Agenda de '+dbr(f)+' a '+dbr(t),
+  kind={day:'Dia',days:'Período',week:'Semana',fort:'Quinzena',month:'Mês'}[DS.mode];
+  return`<div class="dash">${can('agenda')&&nR?`<section class="card full"><b>${nR} solicitação(ões) de agendamento aguardando.</b> <button class="btn" style="margin-left:8px" onclick="go('reqs')">Ver solicitações</button></section>`:''}${can('agenda')?`<section class="card full"><div class="seg sm">${MODES.map(([k,l])=>`<button type="button" class="${DS.mode===k?'on':''}" onclick="dsMode('${k}')">${l}</button>`).join('')}</div><div class="bar" style="margin:12px 0 0;flex-wrap:wrap;justify-content:flex-start"><button class="ghost" onclick="dsGo(-1)">&lsaquo;</button>${DS.mode==='days'?`<label class="il">De<input type="date" value="${f}" onchange="DS.a=this.value||today();if(DS.b<DS.a)DS.b=DS.a;render()"></label><label class="il">Até<input type="date" value="${t}" onchange="DS.b=this.value||today();if(DS.b<DS.a)DS.a=DS.b;render()"></label>`:`<input type="date" value="${DS.a}" onchange="DS.a=DS.b=this.value||today();render()">`}<button class="ghost" onclick="DS.a=DS.b=today();render()">Hoje</button><button class="ghost" onclick="dsGo(1)">&rsaquo;</button>${whoSel(DS.who,'dsWho')}</div><p class="mu" style="margin:8px 0 0">${kind}: ${f===t?dbr(f):dbr(f)+' a '+dbr(t)} &middot; ${L.length} atendimento(s)${DS.who?' &middot; '+esc(whoLbl(DS.who)):''}</p></section>`:''}${can('fin')?`<section class="card full"><h3>Resumo do mês${ym!==today().slice(0,7)?' &middot; '+MESES[+ym.slice(5)-1]+'/'+ym.slice(0,4):''}</h3><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></section>`:''}${can('agenda')?`<section class="card"><div class="bar"><h3 style="margin:0">${ttl}</h3><button class="ghost" onclick="shareAg('${f}','${t}','${DS.who}',false)">Compartilhar</button></div>${L.map(apptRow).join('')||'<p class="mu">Nenhum atendimento neste período.</p>'}</section><section class="card"><div class="bar"><h3 style="margin:0">Próximos atendimentos</h3><button class="ghost" onclick="shareAg('','','${DS.who}',true)">Compartilhar</button></div>${nx.slice(0,5).map(apptRow).join('')||'<p class="mu">Nenhum atendimento agendado. Abra a Agenda no menu para criar o primeiro.</p>'}${nx.length>5?`<p class="mu" style="margin:8px 0 0">+ ${nx.length-5} outros agendados (o compartilhamento inclui todos).</p>`:''}</section>`:''}</div>`},
+ agenda:()=>{const[f,t]=agRange(),dys=daysIn(f,t),bz=busy(f,t,AG.who),nb=dys.filter(d=>bz.has(d)).length,nf=dys.length-nb,rows=inR(f,t,AG.who).sort(cmpA),act=rows.filter(a=>a.status!=='canceled'),hrs=act.reduce((s,a)=>s+(+a.dur||0),0),
+  per=AG.view==='week'?'nesta semana':'neste mês',
+  view=AG.view==='month'?moView(f,t):gridView(AG.view==='week'?dys:[AG.a]),
+  addD0=AG.view==='day'?AG.a:(today()>=f&&today()<=t?today():f);
+  return`<div class="bar" style="flex-wrap:wrap"><div class="seg sm">${[['day','Dia'],['week','Semana'],['month','Mês']].map(([k,l])=>`<button type="button" class="${AG.view===k?'on':''}" onclick="AG.view='${k}';render()">${l}</button>`).join('')}</div><span class="acts" style="align-items:center"><button class="ghost" onclick="agGo(-1)">&lsaquo;</button><button class="ghost" onclick="AG.a=today();render()">Hoje</button><b class="agl">${agLbl()}</b><button class="ghost" onclick="agGo(1)">&rsaquo;</button></span></div>
+<div class="bar" style="flex-wrap:wrap">${whoSel(AG.who,'agWho')}<span class="acts"><button class="ghost" onclick="shareAg('${f}','${t}','${AG.who}',false)">Compartilhar</button><button class="btn" onclick="edit('appts','',{date:'${addD0}'})">Novo atendimento</button></span></div>
+<div class="chips">${AG.view==='day'?`<span class="chip2"><i class="${act.length?'p':'g'}"></i><b>${act.length}</b> atendimento(s) &middot; ${hrs}h agendadas</span>`:`<span class="chip2"><i class="g"></i><b>${nf}</b> dias livres ${per}</span><span class="chip2"><i class="p"></i><b>${nb}</b> dias com serviço agendado</span>`}</div>${view}
+<section class="card"><h3>Exportar disponibilidade</h3><p class="mu" style="margin-top:0">Gera uma lista dia a dia (Livre / Ocupado, com os serviços de cada dia) a partir da data em que você está navegando acima.${AG.who?' Considera só a equipe/funcionário filtrado.':''}</p><div class="bar" style="margin:0"><div class="seg sm">${[['week','Semana'],['month','Mês'],['year','Ano']].map(([k,l])=>`<button type="button" class="${AG.exp===k?'on':''}" onclick="AG.exp='${k}';render()">${l}</button>`).join('')}</div><span class="acts"><button class="ghost" onclick="expAvail('pdf')">PDF</button><button class="ghost" onclick="expAvail('csv')">CSV</button></span></div></section>
+<section class="card"><h3>Serviços &mdash; ${agLbl()}</h3><p class="mu" style="margin-top:0">${act.length} compromisso(s) em ${nb} dia(s) &middot; ${hrs}h agendadas</p><div class="tw"><table class="tb"><thead><tr><th>Data</th><th>Dia</th><th>Horário</th><th>Serviço</th><th>Cliente</th><th>Equipe</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(a=>`<tr class="${a.status==='canceled'?'xx':''}"><td>${dbr(a.date)}</td><td>${WD[dow(a.date)]}</td><td>${a.time}&ndash;${endT(a.time,a.dur)} <small>(${a.dur}h)</small></td><td>${esc(aSv(a).name||'—')}</td><td>${esc(aCl(a).name||'—')}</td><td>${esc(aTm(a)||'—')}</td><td><span class="tag ${stCls(a)}">${stLbl(a)}</span>${a.movedFrom&&a.movedFrom!==a.date?` <small>adiado de ${dbr(a.movedFrom)}</small>`:''}</td><td><div class="acts">${apptActs(a,false)}</div></td></tr>`).join('')||'<tr><td colspan="8" class="mu">Nenhum atendimento neste período.</td></tr>'}</tbody></table></div></section>`},
+ clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>{const ca=D.appts.filter(a=>a.contract===c.id),cd=ca.filter(a=>a.status==='done').length,cp=ca.filter(a=>a.status==='pending').length;return`<div class="row"><div><b>${esc(c.name)}</b>${c.contract?' <span class="tag">Contrato</span>':''}<small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')} ${esc(c.email||'')}</small><small>Plano ${esc(c.plan||'Avulso')}${c.days&&c.days.length?' &middot; '+c.days.map(i=>WD[i]).join(', '):''}</small>${c.contract?`<small>Contrato desde ${dbr(c.cStart)} &middot; ${c.cMonths} ${c.cMonths>1?'meses':'mês'} &middot; ${esc(c.cTime||'')} &middot; ${cp} pendente(s), ${cd} concluído(s)</small>`:''}</div><div class="acts"><button onclick="agendar('${c.id}')">Agendar</button><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`}).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
+ employees:()=>`<div class="bar" style="flex-wrap:wrap"><h3>Equipe</h3><span class="acts"><button class="ghost" onclick="edit('teams')">Novo par</button><button class="btn" onclick="edit('employees')">Novo funcionário</button></span></div><section class="card"><h3>Pares de equipe</h3>${D.teams.map(t=>{const L=D.employees.find(e=>e.id===t.leader),N=D.employees.find(e=>e.id===t.rookie);return`<div class="row"><div><b>${esc(tName(t))}</b> <span class="tag">Par</span><small>Líder: ${esc(L?L.name:'removido')} &middot; Novato(a): ${esc(N?N.name:'removido')}</small>${t.obs?`<small>${esc(t.obs)}</small>`:''}</div><div class="acts"><button onclick="edit('teams','${t.id}')">Editar</button><button onclick="del('teams','${t.id}')">Excluir</button></div></div>`}).join('')||'<p class="mu">Nenhum par criado. Monte um par com um Líder e um Novato(a) para escalar nos atendimentos.</p>'}</section><section class="card"><h3>Funcionários</h3>${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.email||'')}</small><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
  services:()=>`<div class="bar"><h3>Tipos de serviço</h3><button class="btn" onclick="edit('services')">Novo tipo</button></div><section class="card">${D.services.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="row"><div><b>${esc(s.name)}</b><small>${s.dur}h &middot; ${R(s.price)}</small></div><div class="acts"><button onclick="edit('services','${s.id}')">Editar</button><button onclick="del('services','${s.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Cadastre os serviços que a empresa oferece, como limpeza de apartamento, estofados ou pós-obra.</p>'}</section>`,
  fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
   return`<div class="bar"><input type="month" value="${mon}" onchange="mon=this.value;render()"><button class="btn" onclick="edit('tx')">Novo lançamento</button></div><div class="card"><div class="kpis"><div>Receitas<b class="receita">${R(r)}</b></div><div>Despesas<b class="despesa">${R(d)}</b></div><div>Saldo<b>${R(r-d)}</b></div></div></div><div class="bar"><span class="mu">Exportar este mês</span><span class="acts"><button class="ghost" onclick="expPDF()">PDF</button><button class="ghost" onclick="expXLS()">Excel</button></span></div><section class="card">${t.map(x=>`<div class="row"><div><b>${esc(x.desc)}</b><small>${dbr(x.date)}</small></div><b class="${x.type}">${x.type==='despesa'?'-':'+'}${R(x.amount)}</b><div class="acts"><button onclick="del('tx','${x.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Sem lançamentos neste mês.</p>'}</section>`},
@@ -221,40 +267,140 @@ const TABS=[['home','Dashboard','📊'],['agenda','Agenda','📅','agenda'],['re
 const PERMS=[['agenda','Agenda e solicitações'],['clients','Clientes'],['employees','Equipe'],['services','Serviços'],['fin','Financeiro']];
 const can=k=>!STAFF||!!PERM[k];
 const MESES=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
-let calM=today().slice(0,7),selDay=today();
-const calGo=d=>{const[y,m]=calM.split('-').map(Number),x=new Date(y,m-1+d,1);calM=x.getFullYear()+'-'+p2(x.getMonth()+1);render()};
 function svcFill(s){const v=D.services.find(x=>x.id===s.value),F=s.form.elements;if(v){F.dur.value=v.dur;F.price.value=v.price||''}}
-function dayRows(day,emp){return D.appts.filter(a=>a.date===day&&(!emp||(a.emps||[]).includes(emp))).sort(cmpA).map(a=>{const c=D.clients.find(x=>x.id===a.client)||{},sv=D.services.find(x=>x.id===a.service)||{};
- return{'Horário':a.time+'-'+endT(a.time,a.dur),'Cliente':c.name||'','Serviço':sv.name||'','Endereço':c.addr||'','Imóvel':c.kind||'','Duração':a.dur+'h','Equipe':(a.emps||[]).map(i=>(D.employees.find(e=>e.id===i)||{}).name).filter(Boolean).join(', '),'Observações':a.obs||''}})}
-function shareDay(day){
- $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return sendDay(event,'${day}')"><h3>Compartilhar agenda de ${dbr(day)}</h3>
- <label>Para<select name="who"><option value="">Toda a equipe</option>${D.employees.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join('')}</select></label>
+/* ---------- Períodos, filtros, agenda e compartilhamento ---------- */
+const addD=(s,n)=>{const x=new Date(s+'T12:00');x.setDate(x.getDate()+n);return ymd(x)};
+const dow=s=>new Date(s+'T12:00').getDay();
+const wkS=s=>addD(s,-dow(s));
+const monEnd=s=>{const[y,m]=s.split('-').map(Number);return ymd(new Date(y,m,0,12))};
+const ymShift=(ym,n)=>{const[y,m]=ym.split('-').map(Number),x=new Date(y,m-1+n,1,12);return x.getFullYear()+'-'+p2(x.getMonth()+1)};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const tName=t=>t.pname||[t.leader,t.rookie].map(i=>((D.employees.find(e=>e.id===i)||{}).name||'?').split(' ')[0]).join(' & ');
+const stLbl=a=>a.status==='done'?'Concluído':a.status==='canceled'?'Desmarcado':'Pendente';
+const stCls=a=>a.status==='done'?'ok':a.status==='canceled'?'er':'wn';
+const aCl=a=>D.clients.find(c=>c.id===a.client)||{};
+const aSv=a=>D.services.find(s=>s.id===a.service)||{};
+const aEm=a=>(a.emps||[]).map(i=>(D.employees.find(e=>e.id===i)||{}).name).filter(Boolean).join(', ');
+const aTm=a=>{const t=D.teams.find(x=>x.id===a.team);return t?tName(t):aEm(a)};
+function whoMatch(a,w){if(!w)return true;const id=w.slice(2);if(w[0]==='e')return(a.emps||[]).includes(id);const t=D.teams.find(x=>x.id===id);return a.team===id||!!(t&&(a.emps||[]).includes(t.leader)&&(a.emps||[]).includes(t.rookie))}
+const whoLbl=w=>{if(!w)return'';const id=w.slice(2);if(w[0]==='t'){const t=D.teams.find(x=>x.id===id);return t?tName(t):''}const e=D.employees.find(x=>x.id===id);return e?e.name:''};
+const inR=(f,t,w)=>D.appts.filter(a=>a.date>=f&&a.date<=t&&whoMatch(a,w));
+const busy=(f,t,w)=>{const s=new Set();inR(f,t,w).forEach(a=>{if(a.status!=='canceled')s.add(a.date)});return s};
+const daysIn=(f,t)=>{const o=[];for(let d=f;d<=t;d=addD(d,1))o.push(d);return o};
+const whoOpts=v=>`<option value="">Toda a equipe</option>${D.teams.length?`<optgroup label="Pares">${D.teams.map(t=>`<option value="t:${t.id}" ${v==='t:'+t.id?'selected':''}>${esc(tName(t))}</option>`).join('')}</optgroup>`:''}<optgroup label="Funcionários">${D.employees.map(e=>`<option value="e:${e.id}" ${v==='e:'+e.id?'selected':''}>${esc(e.name)}</option>`).join('')}</optgroup>`;
+const whoSel=(v,fn)=>`<select class="who" onchange="${fn}(this.value)">${whoOpts(v)}</select>`;
+const dl=(blob,name)=>{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),4000)};
+
+/* Dashboard */
+let DS={mode:'day',a:today(),b:today(),who:''};
+const MODES=[['day','Dia'],['days','Dias'],['week','Semana'],['fort','Quinzena'],['month','Mês']];
+function rng(m,a,b){if(m==='day')return[a,a];if(m==='days')return a<=b?[a,b]:[b,a];if(m==='week')return[wkS(a),addD(wkS(a),6)];if(m==='fort'){const ym=a.slice(0,7);return+a.slice(8)<=15?[ym+'-01',ym+'-15']:[ym+'-16',monEnd(a)]}return[a.slice(0,7)+'-01',monEnd(a)]}
+function dsMode(m){const[f,t]=rng(DS.mode,DS.a,DS.b);DS.mode=m;if(m==='days'){DS.a=f;DS.b=t}else DS.b=DS.a;render()}
+function dsGo(n){const{mode:m,a,b}=DS;
+ if(m==='day')DS.a=DS.b=addD(a,n);
+ else if(m==='days'){const[f,t]=rng(m,a,b),k=daysIn(f,t).length;DS.a=addD(f,k*n);DS.b=addD(t,k*n)}
+ else if(m==='week')DS.a=DS.b=addD(a,7*n);
+ else if(m==='fort'){const ym=a.slice(0,7);if(n>0)DS.a=+a.slice(8)<=15?ym+'-16':ymShift(ym,1)+'-01';else DS.a=+a.slice(8)>15?ym+'-01':ymShift(ym,-1)+'-16';DS.b=DS.a}
+ else DS.a=DS.b=ymShift(a.slice(0,7),n)+'-01';
+ render()}
+const dsWho=v=>{DS.who=v;render()},agWho=v=>{AG.who=v;render()};
+
+/* Agenda */
+let AG={view:'week',a:today(),who:'',exp:'week'};
+function agRange(){const{view:v,a}=AG;if(v==='day')return[a,a];if(v==='week')return[wkS(a),addD(wkS(a),6)];return[a.slice(0,7)+'-01',monEnd(a)]}
+function agGo(n){const{view:v,a}=AG;AG.a=v==='day'?addD(a,n):v==='week'?addD(a,7*n):ymShift(a.slice(0,7),n)+'-01';render()}
+function agLbl(){const[f,t]=agRange();return AG.view==='day'?WD[dow(f)]+', '+dbr(f):AG.view==='week'?dbr(f)+' – '+dbr(t):cap(MESES[+AG.a.slice(5,7)-1])+' '+AG.a.slice(0,4)}
+const cardAp=a=>`<div class="ac ${a.status||'pending'}" onclick="edit('appts','${a.id}')"><b>${esc(aCl(a).name||'Cliente removido')}${aSv(a).name?' - '+esc(aSv(a).name):''}</b><small>${a.time}–${endT(a.time,a.dur)} · ${a.dur}h</small>${aTm(a)?`<small>${esc(aTm(a))}</small>`:''}${a.status==='done'||a.status==='canceled'?`<small class="st ${stCls(a)}">${stLbl(a)}</small>`:''}</div>`;
+const gridView=days=>`<div class="wg ${days.length===1?'one':''}">${days.map(d=>{const L=inR(d,d,AG.who).sort(cmpA),act=L.filter(a=>a.status!=='canceled');return`<div class="dc ${d===today()?'td':''}"><div class="dh"><span>${WD[dow(d)]}</span><b>${+d.slice(8)}</b></div>${act.length?'':'<div class="fr">Livre</div>'}${L.map(cardAp).join('')}<button class="add" onclick="edit('appts','',{date:'${d}'})">+ Adicionar</button></div>`}).join('')}</div>`;
+const moView=(f,t)=>{const days=daysIn(wkS(f),addD(wkS(t),6));return`<div class="mg">${WD.map(d=>`<div class="mh">${d}</div>`).join('')}${days.map(d=>{if(d<f||d>t)return'<div class="mc out"></div>';const L=inR(d,d,AG.who).filter(a=>a.status!=='canceled').sort(cmpA);return`<button class="mc ${d===today()?'td':''}" onclick="AG.view='day';AG.a='${d}';render()"><b>${+d.slice(8)}</b>${L.slice(0,2).map(a=>`<span class="chip">${a.time} ${esc((aCl(a).name||'').split(' ')[0])}</span>`).join('')}${L.length>2?`<span class="chip">+${L.length-2}</span>`:''}${L.length?`<span class="cnt">${L.length}</span>`:'<span class="fr">Livre</span>'}</button>`}).join('')}</div>`};
+function availRows(){const a=AG.a,k=AG.exp,[f,t]=k==='week'?[wkS(a),addD(wkS(a),6)]:k==='month'?[a.slice(0,7)+'-01',monEnd(a)]:[a.slice(0,4)+'-01-01',a.slice(0,4)+'-12-31'];
+ return{f,t,rows:daysIn(f,t).map(d=>{const L=inR(d,d,AG.who).filter(x=>x.status!=='canceled').sort(cmpA);return{'Data':dbr(d),'Dia':WD[dow(d)],'Situação':L.length?'Ocupado':'Livre','Serviços':L.map(x=>x.time+' '+(aCl(x).name||'')+(aSv(x).name?' - '+aSv(x).name:'')).join(' | ')}})}}
+function expAvail(fmt){const{f,t,rows}=availRows(),ttl='Disponibilidade '+dbr(f)+' a '+dbr(t)+(AG.who?' - '+whoLbl(AG.who):'');
+ if(fmt==='pdf'){const p=new jspdf.jsPDF(),y0=pdfHead(p,ttl);p.autoTable({startY:y0,head:[Object.keys(rows[0])],body:rows.map(r=>Object.values(r)),headStyles:{fillColor:[107,42,111]},styles:{fontSize:8},didParseCell:h=>{if(h.section==='body'&&h.column.index===2)h.cell.styles.textColor=h.cell.raw==='Livre'?[46,125,79]:[184,58,46]}});dl(p.output('blob'),'disponibilidade-'+f+'_'+t+'.pdf')}
+ else{const q=v=>'"'+String(v).replace(/"/g,'""')+'"';dl(new Blob(['\ufeff'+[Object.keys(rows[0]),...rows.map(r=>Object.values(r))].map(r=>r.map(q).join(';')).join('\r\n')],{type:'text/csv;charset=utf-8'}),'disponibilidade-'+f+'_'+t+'.csv')}}
+
+/* Compartilhar agenda (período, próximos, equipe/funcionário) */
+const agRows=(f,t,nx,w)=>(nx?D.appts.filter(a=>a.status==='pending'&&a.date>today()):D.appts.filter(a=>a.date>=f&&a.date<=t&&a.status!=='canceled')).filter(a=>whoMatch(a,w)).sort(cmpA).map(a=>{const c=aCl(a);return{'Data':dbr(a.date),'Dia':WD[dow(a.date)],'Horário':a.time+'-'+endT(a.time,a.dur),'Cliente':c.name||'','Serviço':aSv(a).name||'','Endereço':c.addr||'','Imóvel':c.kind||'','Duração':a.dur+'h','Equipe':aEm(a),'Observações':a.obs||''}});
+let SHS={};
+function shareAg(f,t,w,nx){SHS={f,t,nx};const ttl=nx?'próximos atendimentos':f===t?'agenda de '+dbr(f):'agenda de '+dbr(f)+' a '+dbr(t);
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return sendAg(event)"><h3>Compartilhar ${ttl}</h3>
+ <label>Para<select name="who">${whoOpts(w)}</select></label>
  <label>Formato<select name="fmt"><option value="pdf">PDF</option><option value="xls">Excel (.xlsx)</option></select></label>
  <label>Enviar por<select name="via"><option value="wa">WhatsApp</option><option value="mail">E-mail</option></select></label>
  <div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Enviar</button></div></form></div>`}
-async function sendDay(e,day){
- e.preventDefault();const f=e.target.elements,who=f.who.value,fmt=f.fmt.value,via=f.via.value,emp=D.employees.find(x=>x.id===who),L=dayRows(day,who);
- if(!L.length){toast('Nenhum atendimento neste dia'+(emp?' para '+emp.name:'')+'.');return false}
- const title='Agenda '+dbr(day)+(emp?' - '+emp.name:''),fname='agenda-'+day+(emp?'-'+emp.name.split(' ')[0]:'');
+async function sendAg(e){
+ e.preventDefault();const F=e.target.elements,w=F.who.value,fmt=F.fmt.value,via=F.via.value,{f,t,nx}=SHS,L=agRows(f,t,nx,w);
+ if(!L.length){toast('Nenhum atendimento para compartilhar'+(w?' ('+whoLbl(w)+')':'')+'.');return false}
+ const who=whoLbl(w),title=(nx?'Próximos atendimentos':f===t?'Agenda '+dbr(f):'Agenda '+dbr(f)+' a '+dbr(t))+(who?' - '+who:''),fname=(nx?'proximos-atendimentos':'agenda-'+f+(f===t?'':'_'+t))+(who?'-'+who.split(' ')[0].toLowerCase():'');
  let blob,ext;
- if(fmt==='pdf'){const p=new jspdf.jsPDF({orientation:'landscape'});const y0=pdfHead(p,title);
-  p.autoTable({startY:y0,head:[Object.keys(L[0])],body:L.map(r=>Object.values(r)),headStyles:{fillColor:[107,42,111]}});blob=p.output('blob');ext='pdf'}
+ if(fmt==='pdf'){const p=new jspdf.jsPDF({orientation:'landscape'}),y0=pdfHead(p,title);p.autoTable({startY:y0,head:[Object.keys(L[0])],body:L.map(r=>Object.values(r)),headStyles:{fillColor:[107,42,111]},styles:{fontSize:8}});blob=p.output('blob');ext='pdf'}
  else{const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,XLSX.utils.json_to_sheet(L),'Agenda');blob=new Blob([XLSX.write(wb,{bookType:'xlsx',type:'array'})],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});ext='xlsx'}
- const file=new File([blob],fname+'.'+ext,{type:blob.type}),txt=CO.name+' - '+title+'\n'+L.map(r=>r['Horário']+' '+r['Cliente']+' - '+r['Endereço']).join('\n');
+ const file=new File([blob],fname+'.'+ext,{type:blob.type}),txt=CO.name+' - '+title+'\n'+L.map(r=>r['Data']+' '+r['Horário']+' '+r['Cliente']+' - '+r['Endereço']).join('\n');
  closeM();
  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title,text:txt});return false}}catch(x){if(x.name==='AbortError')return false}
- const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=file.name;a.click();
- const tel=((emp&&emp.phone)||'').replace(/\D/g,''),to=tel?(tel.length<=11?'55'+tel:tel):'';
+ dl(blob,file.name);
+ let tel='',mail='';
+ if(w[0]==='e'){const m=D.employees.find(x=>x.id===w.slice(2))||{};tel=m.phone||'';mail=m.email||''}
+ else if(w[0]==='t'){const t2=D.teams.find(x=>x.id===w.slice(2));if(t2)mail=[t2.leader,t2.rookie].map(i=>(D.employees.find(x=>x.id===i)||{}).email).filter(Boolean).join(',')}
+ const dg=tel.replace(/\D/g,''),to=dg?(dg.length<=11?'55'+dg:dg):'';
  if(via==='wa')window.open('https://wa.me/'+to+'?text='+encodeURIComponent(txt),'_blank');
- else location.href='mailto:'+((emp&&emp.email)||'')+'?subject='+encodeURIComponent(title)+'&body='+encodeURIComponent(txt);
+ else location.href='mailto:'+mail+'?subject='+encodeURIComponent(title)+'&body='+encodeURIComponent(txt);
  toast('Arquivo baixado. Anexe-o na conversa ou no e-mail.');return false}
+
+/* Adiar / desmarcar */
+function postpone(id){const a=D.appts.find(x=>x.id===id);
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return savePost(event,'${id}')"><h3>Adiar atendimento</h3><p class="mu">${esc(aCl(a).name||'Cliente')} &middot; marcado para ${dbr(a.date)} às ${a.time}</p><label>Nova data<input name="date" type="date" required value="${a.date}"></label><label>Novo horário<input name="time" type="time" required value="${a.time}"></label><div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Adiar</button></div></form></div>`}
+async function savePost(e,id){e.preventDefault();const a=D.appts.find(x=>x.id===id),F=e.target.elements;try{await col('appts').doc(id).update({date:F.date.value,time:F.time.value,movedFrom:a.movedFrom||a.date});closeM();toast('Atendimento adiado para '+dbr(F.date.value)+'.')}catch(x){toast(x.message)}return false}
+async function cancelAp(id){if(!confirm('Desmarcar este atendimento? Ele sai da agenda e fica no histórico como "Desmarcado".'))return;try{await col('appts').doc(id).update({status:'canceled'})}catch(x){toast(x.message)}}
+async function reopen(id){try{await col('appts').doc(id).update({status:'pending'})}catch(x){toast(x.message)}}
+function teamFill(s){const t=D.teams.find(x=>x.id===s.value);if(!t)return;s.form.querySelectorAll('input[name=emps]').forEach(i=>i.checked=i.value===t.leader||i.value===t.rookie)}
+
+/* Contrato de cliente: marca as datas na agenda */
+const nthWd=(y,m,wd,n)=>{const d=new Date(y,m,1,12);d.setDate(1+(wd-d.getDay()+7)%7+(n-1)*7);return d};
+function contractDates(c){
+ const st=new Date(c.cStart+'T12:00'),en=new Date(st);en.setMonth(en.getMonth()+(+c.cMonths||1));const days=c.days||[],out=[];
+ if(c.plan==='Mensal'){const f=new Date(st);for(let i=0;i<7&&!days.includes(f.getDay());i++)f.setDate(f.getDate()+1);
+  const n=Math.min(4,Math.ceil(f.getDate()/7)),wd=f.getDay();
+  for(let k=0;k<24;k++){const x=nthWd(f.getFullYear(),f.getMonth()+k,wd,n);if(x>=en)break;if(x>=st)out.push(ymd(x))}
+  return out}
+ const step=c.plan==='Quinzenal'?2:1,ws=new Date(wkS(c.cStart)+'T12:00');
+ for(let d=new Date(st);d<en;d.setDate(d.getDate()+1)){const w=Math.floor(Math.round((d-ws)/864e5)/7);if(days.includes(d.getDay())&&w%step===0)out.push(ymd(d))}
+ return out}
+async function genContract(cid,c){
+ const mine=D.appts.filter(a=>a.contract===cid),keep=new Set(mine.filter(a=>a.status!=='pending').map(a=>a.date)),pend=mine.filter(a=>a.status==='pending');
+ if(pend.length&&!confirm('Este contrato já tem '+pend.length+' data(s) pendente(s) na agenda. Substituir pelas novas datas? (adiamentos feitos nelas serão perdidos)')){toast('Cliente salvo. A agenda do contrato não foi alterada.');return}
+ const tm=D.teams.find(x=>x.id===c.cTeam),emps=tm?[tm.leader,tm.rookie]:[],ds=contractDates(c).filter(d=>!keep.has(d)),base=col('appts'),ops=[];
+ pend.forEach(a=>ops.push(b=>b.delete(base.doc(a.id))));
+ ds.forEach(d=>ops.push(b=>b.set(base.doc(),{client:cid,service:c.cService||'',date:d,time:c.cTime||'08:00',dur:c.cDur||4,emps,team:tm?tm.id:'',freq:'Contrato',contract:cid,price:c.cPrice||0,uber:c.cUber||0,obs:'',status:'pending',createdAt:TS()})));
+ try{for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(f=>f(b));await b.commit()}toast(ds.length+' data(s) marcada(s) na agenda.')}catch(x){toast('Erro ao marcar a agenda: '+x.message)}}
+function ctrHTML(o,l){const op=(arr,v)=>arr.map(([a,b])=>`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`).join('');
+ return`<fieldset><legend>${l}</legend><label class="chk"><input type="checkbox" name="cOn" ${o.contract?'checked':''} onchange="this.closest('fieldset').querySelector('.cbox').style.display=this.checked?'block':'none'"> Cliente com contrato</label><div class="cbox" style="display:${o.contract?'block':'none'}"><p class="mu" style="margin:0">Usa o plano e os dias da limpeza escolhidos acima. Ex.: plano Semanal + Sex, 2 meses, 10:00.</p>
+ <label>Início do contrato<input name="cStart" type="date" value="${esc(o.cStart||today())}"></label>
+ <label>Duração do contrato<select name="cMonths">${op([1,2,3,4,5,6,9,12].map(n=>[n,n+(n>1?' meses':' mês')]),o.cMonths||1)}</select></label>
+ <label>Horário de início<input name="cTime" type="time" value="${esc(o.cTime||'10:00')}"></label>
+ <label>Duração de cada visita<select name="cDur">${op(DUR,o.cDur||4)}</select></label>
+ <label>Tipo de serviço<select name="cService">${op([['','Selecione...'],...D.services.map(s=>[s.id,s.name])],o.cService||'')}</select></label>
+ <label>Par de equipe<select name="cTeam">${op([['','Definir depois'],...D.teams.map(t=>[t.id,tName(t)])],o.cTeam||'')}</select></label>
+ <label>Valor por visita (R$)<input name="cPrice" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(o.cPrice||'')}"></label>
+ <label>Uber por visita (R$)<input name="cUber" type="number" step="0.01" min="0" inputmode="decimal" value="${esc(o.cUber||'')}"></label>
+ <label class="chk"><input type="checkbox" name="cGen" ${o.contract&&o.cGenerated?'':'checked'}> Marcar as datas na agenda ao salvar</label><small class="mu">Depois, use Adiar ou Desmarcar em cada data da agenda quando precisar.</small></div></fieldset>`}
+
+/* Notificações (sininho) */
+const BELL=SV+'<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+const seenA=()=>{try{return JSON.parse(ls('gseen_'+(U?U.uid:''))||'[]')}catch(e){return[]}};
+const needHint=()=>!isAdmin&&U&&U.email===ADMIN_EMAIL;
+const hintHTML=()=>needHint()?`<div class="ann alerta"><span class="tag">alerta</span> <b>Esta conta ainda não é Admin do portal</b><p>No Firestore, crie a coleção "admins" com um documento cujo ID seja exatamente:\n${U.uid}</p></div>`:'';
+const nUnread=()=>{const s=seenA();return D.ann.filter(a=>!s.includes(a.id)).length+(can('agenda')?D.reqs.filter(q=>q.status==='new').length:0)+(needHint()?1:0)};
+function openBell(){const seen=seenA(),nR=can('agenda')?D.reqs.filter(q=>q.status==='new').length:0,A=D.ann,h=hintHTML();
+ $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><div class="sheet"><div class="bar"><h3 style="margin:0">Notificações</h3><button class="ghost" onclick="closeM()">Fechar</button></div>${nR?`<div class="ann"><b>${nR} solicitação(ões) de agendamento aguardando.</b><p><button class="btn" onclick="closeM();go('reqs')">Ver solicitações</button></p></div>`:''}${h}${A.map(a=>`<div class="ann ${esc(a.type)}"><span class="tag">${esc(a.type)}</span>${seen.includes(a.id)?'':' <span class="tag wn">novo</span>'} <b>${esc(a.title)}</b><p>${esc(a.text)}</p></div>`).join('')}${!nR&&!A.length&&!h?'<p class="mu">Nenhuma notificação por enquanto.</p>':''}</div></div>`;
+ ls('gseen_'+U.uid,JSON.stringify(A.map(a=>a.id)));render()}
 const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],ADMIN_EMAIL='willbrasilia@gmail.com';
 let mnu=false;
 let sbc=false;
 const menu=v=>{mnu=v;render()};
 const toggleMenu=()=>{innerWidth<900?mnu=!mnu:sbc=!sbc;render()};
 const go=t=>{tab=t;mnu=false;render();const m=$('main');if(m)m.scrollTop=0};
-const hint=()=>(!isAdmin&&U.email===ADMIN_EMAIL)?`<div class="ann alerta"><b>Esta conta ainda não é Admin do portal</b><p>No Firestore, crie a coleção "admins" com um documento cujo ID seja exatamente:\n${U.uid}</p></div>`:'';
+
 async function saveCo(e){e.preventDefault();const f=new FormData(e.target),d={name:f.get('name').trim(),slogan:f.get('slogan').trim(),logo:f.get('logo')||'',logoR:parseFloat(f.get('logoR'))||0,segment:f.get('segment'),phone:f.get('phone'),email:U.email};
  try{await db.doc('companies/'+CID).set(d,{merge:true});CO={...CO,...d};syncPublic();render();toast('Dados da empresa salvos.')}catch(x){toast(x.message)}return false}
 function logoPick(inp){const fl=inp.files[0];if(!fl)return;const r=new FileReader();
@@ -271,7 +417,7 @@ function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
 function render(){
  if(!U||!CO)return;
  const sc=($('main')||{}).scrollTop||0,nR=D.reqs.filter(q=>q.status==='new').length,tabs=(isAdmin?[...TABS,['admin','Admin do portal','👑','own']]:TABS).filter(t=>!t[3]||(t[3]==='own'?!STAFF:can(t[3])));
- $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Alternar tema" aria-label="Alternar tema" onclick="toggleMode()"><span id="tmi">${isDark()?SUN:MOON}</span></button><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh">${CO.logo?`<img class="avl" src="${esc(CO.logo)}" alt="">`:`<div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div>`}<div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div>${CO.slogan?`<div class="sr"><i>${esc(CO.slogan)}</i></div>`:''}</div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}${k==='reqs'&&nR?`<b class="nb">${nR}</b>`:''}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
+ $('#app').innerHTML=`<div class="shell ${sbc?'col':''}"><div class="top"><div class="tl"><button class="menu-btn" aria-label="Abrir menu" onclick="toggleMenu()"><i></i><i></i><i></i></button><span class="tt">Portal de Gestão</span></div><div class="tr"><span class="un">${esc(U.email)}</span><button class="pw" title="Notificações" aria-label="Notificações" onclick="openBell()">${BELL}${nUnread()?`<b class="bdg">${nUnread()>9?'9+':nUnread()}</b>`:''}</button><button class="pw" title="Alternar tema" aria-label="Alternar tema" onclick="toggleMode()"><span id="tmi">${isDark()?SUN:MOON}</span></button><button class="pw" title="Sair" aria-label="Sair" onclick="auth.signOut()"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v9"/><path d="M6.3 6.3a8 8 0 1 0 11.4 0"/></svg></button></div></div><nav class="side ${mnu?'open':''}"><div class="sh">${CO.logo?`<img class="avl" src="${esc(CO.logo)}" alt="">`:`<div class="av">${esc((CO.name||'?')[0].toUpperCase())}</div>`}<div><div class="sn">${esc(CO.name)}</div><div class="sr">${isAdmin?'Administrador do portal':esc(CO.segment||'')}</div>${CO.slogan?`<div class="sr"><i>${esc(CO.slogan)}</i></div>`:''}</div></div><ul>${tabs.map(([k,l,ic])=>`<li><button class="${tab===k?'on':''}" onclick="go('${k}')"><span>${ic}</span>${l}${k==='reqs'&&nR?`<b class="nb">${nR}</b>`:''}</button></li>`).join('')}</ul><div class="sf"><button class="ghost" onclick="auth.signOut()">Sair</button></div></nav><div class="ovl ${mnu?'on':''}" onclick="menu(false)"></div><main><div class="mi">${VIEW[tab]()}</div></main></div>`;
  const m=$('main');if(m)m.scrollTop=sc}
 
 /* ---------- Agendamento online, solicitações e convites ---------- */
@@ -341,7 +487,7 @@ async function boot(u){
   else CO={name:u.email,segment:''}}
  try{isAdmin=!STAFF&&(await db.doc('admins/'+u.uid).get()).exists}catch(e){isAdmin=false}
  if(!CO.name)CO.name=u.email;if(CO.mode)MODE=CO.mode;if(CO.palette&&PAL[CO.palette])PALK=CO.palette;ls('gm',MODE);ls('gp',PALK);applyTheme();
- const need=new Set();if(can('agenda'))['appts','reqs','clients','employees','services'].forEach(k=>need.add(k));if(can('clients'))need.add('clients');if(can('employees'))need.add('employees');if(can('services'))need.add('services');if(can('fin'))need.add('tx');
+ const need=new Set();if(can('agenda'))['appts','reqs','clients','employees','services','teams'].forEach(k=>need.add(k));if(can('clients'))need.add('clients');if(can('employees')){need.add('employees');need.add('teams')}if(can('services'))need.add('services');if(can('fin'))need.add('tx');
  need.forEach(k=>subs.push(col(k).onSnapshot(sn=>{D[k]=sn.docs.map(d=>({id:d.id,...d.data()}));if(k==='services')syncPublic();render()},e=>toast('Erro: '+e.message))));
  if(!STAFF)subs.push(db.collection('invites').where('company','==',CID).onSnapshot(sn=>{D.users=sn.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{}));
  if(isAdmin)subs.push(db.collection('companies').onSnapshot(sn=>{D.cos=sn.docs.map(d=>d.data());render()}));

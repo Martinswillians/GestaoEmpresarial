@@ -81,6 +81,10 @@ service cloud.firestore {
         allow read: if dono(cid) || perm(cid, 'employees') || perm(cid, 'agenda');
         allow write: if dono(cid) || perm(cid, 'employees');
       }
+      match /teams/{d} {
+        allow read: if dono(cid) || perm(cid, 'employees') || perm(cid, 'agenda');
+        allow write: if dono(cid) || perm(cid, 'employees');
+      }
       match /services/{d} {
         allow read: if dono(cid) || perm(cid, 'services') || perm(cid, 'agenda');
         allow write: if dono(cid) || perm(cid, 'services');
