@@ -96,6 +96,8 @@ a{color:var(--pl)}
 .tw{overflow-x:auto}.tb{width:100%;border-collapse:collapse;font-size:13px}.tb th{text-align:left;color:var(--mu);font-size:11px;text-transform:uppercase;padding:8px;border-bottom:1px solid var(--bd);white-space:nowrap}.tb td{padding:9px 8px;border-bottom:1px solid var(--bd);vertical-align:middle}.tb tr.xx{opacity:.55}.tb .acts{flex-wrap:nowrap;justify-content:flex-start}.tb .acts button{white-space:nowrap}
 @media(max-width:700px){.mc{min-height:58px;align-items:center}.mc .chip{display:none}.mc .fr{font-size:10px}.mc .cnt{display:grid;place-items:center;background:var(--p);color:#fff;border-radius:999px;font-size:11px;min-width:20px;height:20px}}
 .mc.sel{background:var(--p);color:#fff;border-color:var(--p)}.mc.sel b,.mc.sel .fr{color:#fff}.mc.sel .chip{background:#fff3;color:#fff;border-left-color:#fff}.mc.sel .cnt{background:#fff;color:var(--p)}
+.fold{background:var(--card);border:1px solid var(--bd);border-radius:12px;margin-bottom:10px}.fold summary{cursor:pointer;list-style:none;display:flex;align-items:center;gap:8px;padding:12px 14px;font-weight:600;font-size:14px}.fold summary::-webkit-details-marker{display:none}.fold summary::after{content:'\203A';margin-left:auto;font-size:20px;color:var(--mu);transition:transform .2s}.fold[open] summary::after{transform:rotate(90deg)}.fold .fb{padding:0 14px 10px}.fold .ann{margin:0 0 8px}
+.auth form.card{margin-bottom:16px;padding:18px}
 </style>
 </head>
 <body>
@@ -445,7 +447,9 @@ async function loadAdm(){if(!isAdmin||ADML)return;ADML=true;render();
  const names=['employees','clients','services','appts','requests','teams'];
  await Promise.all(D.cos.map(async c=>{try{const[e,cl,sv,ap,rq,tm]=await Promise.all(names.map(n=>db.collection('companies/'+c.id+'/'+n).get()));ADM[c.id]={employees:e.size,clients:cl.size,services:sv.size,appts:ap.size,done:ap.docs.filter(d=>d.data().status==='done').length,reqs:rq.size,reqsNew:rq.docs.filter(d=>d.data().status==='new').length,teams:tm.size}}catch(x){ADM[c.id]={err:1}}}));
  ADML=false;render()}
-const netPubHTML=()=>{const L=D.netPub.slice().sort((a,b)=>((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0)).slice(0,5);return`<div class="card"><h3 style="margin:0 0 4px">Network</h3><p class="mu" style="margin:0 0 8px">Dúvidas, indicações de profissionais e permutas entre empresas. Para participar, peça a liberação ao administrador do portal e entre com a sua conta.</p>${L.map(p=>`<div class="row"><div><span class="tag">${NT[p.type]||esc(p.type)}</span> <b>${esc(p.title)}</b><small>${esc(p.companyName||'')} &middot; ${fdt(p.createdAt)}</small><p style="margin:6px 0 0;white-space:pre-line">${esc(p.text)}</p>${p.contact?`<small>Contato: ${esc(p.contact)}</small>`:''}</div></div>`).join('')||'<p class="mu">Nenhuma publicação ainda.</p>'}</div>`};
+let ANO=false,NTO=false;
+const authAnn=()=>D.ann.length?`<details class="fold" ${ANO?'open':''} ontoggle="ANO=this.open"><summary>Novidades e avisos <span class="tag">${D.ann.length}</span></summary><div class="fb">${annHTML()}</div></details>`:'';
+const netPubHTML=()=>{const L=D.netPub.slice().sort((a,b)=>((b.createdAt&&b.createdAt.seconds)||0)-((a.createdAt&&a.createdAt.seconds)||0)).slice(0,3);return`<details class="fold" ${NTO?'open':''} ontoggle="NTO=this.open"><summary>Network entre empresas${L.length?` <span class="tag">${L.length}</span>`:''}</summary><div class="fb"><p class="mu" style="margin:0 0 6px">Dúvidas, indicações de profissionais e permutas. Para participar, peça a liberação ao administrador do portal e entre com a sua conta.</p>${L.map(p=>`<div class="row"><div><span class="tag">${NT[p.type]||esc(p.type)}</span> <b>${esc(p.title)}</b><small>${esc(p.companyName||'')} &middot; ${fdt(p.createdAt)}</small><p style="margin:6px 0 0;white-space:pre-line">${esc(p.text)}</p>${p.contact?`<small>Contato: ${esc(p.contact)}</small>`:''}</div></div>`).join('')||'<p class="mu">Nenhuma publicação ainda.</p>'}</div></details>`};
 db.collection('network_posts').where('pub','==',true).limit(20).onSnapshot(s=>{D.netPub=s.docs.map(d=>({id:d.id,...d.data()}));if(!U){const b=$('#netbox');if(b)b.innerHTML=netPubHTML()}},()=>{});
 const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'],ADMIN_EMAIL='willbrasilia@gmail.com';
 let mnu=false;
@@ -505,14 +509,14 @@ const resendV=async()=>{try{await auth.currentUser.sendEmailVerification();toast
 
 /* ---------- Login e cadastro ---------- */
 function renderAuth(){
- $('#app').innerHTML=`<div class="auth"><div class="brand"><h1>Portal de Gestão Empresarial</h1><p>Agenda, clientes, equipe e financeiro da sua empresa em um só lugar.</p></div><div id="annbox">${annHTML()}</div><div id="netbox">${netPubHTML()}</div>
+ $('#app').innerHTML=`<div class="auth"><div class="brand"><h1>Portal de Gestão Empresarial</h1><p>Agenda, clientes, equipe e financeiro da sua empresa em um só lugar.</p></div>
  <form class="card" onsubmit="return doAuth(event)"><div class="seg"><button type="button" class="${mode==='login'?'on':''}" onclick="mode='login';renderAuth()">Entrar</button><button type="button" class="${mode==='reg'?'on':''}" onclick="mode='reg';renderAuth()">Nova empresa</button><button type="button" class="${mode==='inv'?'on':''}" onclick="mode='inv';renderAuth()">Tenho convite</button></div>${mode==='inv'?'<p class="mu">Use o mesmo e-mail em que a empresa cadastrou você. Enviaremos um link de confirmação.</p>':''}
  ${mode==='reg'?`<label>Nome da empresa<input name="name" required></label><label>Segmento<select name="seg"><option>Limpeza residencial</option><option>Outro</option></select></label>`:''}
  <label>E-mail<input name="email" type="email" required autocomplete="username"></label>
  <label>Senha<input name="pw" type="password" minlength="6" required autocomplete="${mode==='login'?'current-password':'new-password'}"></label>
  <label class="chk"><input type="checkbox" name="keep" checked> Manter conectado neste dispositivo</label>
  <button class="btn" style="width:100%">${mode==='login'?'Entrar':'Criar conta'}</button><p id="err" class="err"></p>
- ${mode==='login'?'<a href="#" onclick="return resetPw()">Esqueci minha senha</a>':''}</form></div>`}
+ ${mode==='login'?'<a href="#" onclick="return resetPw()">Esqueci minha senha</a>':''}</form><div id="annbox">${authAnn()}</div><div id="netbox">${netPubHTML()}</div></div>`}
 async function doAuth(e){
  e.preventDefault();const f=new FormData(e.target),em=f.get('email'),pw=f.get('pw');
  try{
@@ -549,7 +553,7 @@ async function boot(u){
  render()}
 db.collection('announcements').orderBy('createdAt','desc').limit(20).onSnapshot(s=>{
  D.ann=s.docs.map(d=>({id:d.id,...d.data()}));
- if(U)render();else{const b=$('#annbox');if(b)b.innerHTML=annHTML()}},()=>{});
+ if(U)render();else{const b=$('#annbox');if(b)b.innerHTML=authAnn()}},()=>{});
 const BOOK=new URLSearchParams(location.search).get('agendar');
 if(BOOK)renderBooking(BOOK);else auth.onAuthStateChanged(u=>{if(!reg)boot(u)});
 </script>
