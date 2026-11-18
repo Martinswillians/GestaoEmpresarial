@@ -26,7 +26,8 @@ service cloud.firestore {
       let d = request.resource.data;
       return exists(/databases/$(database)/documents/public/$(cid)) &&
         get(/databases/$(database)/documents/public/$(cid)).data.enabled == true &&
-        d.keys().hasOnly(['name','phone','email','addr','svc','svcName','date','time','obs','status','createdAt']) &&
+        d.keys().hasOnly(['name','phone','email','addr','svc','svcName','date','time','obs','status','createdAt','uid']) &&
+        (!d.keys().hasAny(['uid']) || (logado() && d.uid == request.auth.uid)) &&
         d.name is string && d.name.size() > 0 && d.name.size() <= 80 &&
         d.phone is string && d.phone.size() <= 20 &&
         d.email is string && d.email.size() <= 80 &&
@@ -36,6 +37,26 @@ service cloud.firestore {
         d.date is string && d.date.size() == 10 &&
         d.time is string && d.time.size() == 5 &&
         d.status == 'new' && d.createdAt == request.time;
+    }
+
+    // Contas de clientes (login na página de agendamento) e o acompanhamento das solicitações
+    match /customers/{uid} {
+      allow read: if logado() && request.auth.uid == uid;
+      allow create, update: if logado() && request.auth.uid == uid &&
+        request.resource.data.keys().hasOnly(['email','name','phone','createdAt']) &&
+        request.resource.data.email is string && request.resource.data.email.size() <= 80 &&
+        request.resource.data.name is string && request.resource.data.name.size() <= 80 &&
+        request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
+      match /requests/{rid} {
+        allow read: if logado() && request.auth.uid == uid;
+        allow create: if logado() && request.auth.uid == uid &&
+          request.resource.data.keys().hasOnly(['company','companyName','svcName','date','time','addr','obs','status','createdAt']) &&
+          request.resource.data.status == 'new' &&
+          request.resource.data.createdAt == request.time;
+        // a empresa (ou a equipe com permissão de agenda) só atualiza o status
+        allow update: if (dono(resource.data.company) || perm(resource.data.company, 'agenda')) &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
+      }
     }
 
     match /admins/{uid} {
