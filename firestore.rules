@@ -72,9 +72,10 @@ service cloud.firestore {
       allow write: if admin();
     }
     match /network_posts/{pid} {
-      allow read: if netOk() || admin();
+      allow read: if netOk() || admin() || resource.data.pub == true;
       allow create: if netOk() &&
-        request.resource.data.keys().hasOnly(['company','companyName','type','title','text','contact','createdAt']) &&
+        request.resource.data.keys().hasOnly(['company','companyName','type','title','text','contact','pub','createdAt']) &&
+        request.resource.data.pub is bool &&
         request.resource.data.company == request.auth.uid &&
         request.resource.data.type in ['duvida','procuro','indico','permuta'] &&
         request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100 &&
@@ -98,6 +99,10 @@ service cloud.firestore {
       allow read: if dono(cid) || admin() || equipe(cid);
       allow create, update: if dono(cid);
 
+      // Admin do portal: leitura apenas para contar registros na tela de uso
+      match /{sub}/{d} {
+        allow read: if admin() && sub in ['employees','clients','services','appts','requests','teams'];
+      }
       match /appts/{d} {
         allow read, write: if dono(cid) || perm(cid, 'agenda');
       }
