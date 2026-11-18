@@ -61,6 +61,39 @@ service cloud.firestore {
       allow delete: if dono(resource.data.company);
     }
 
+    // Network entre empresas (liberadas pelo admin do portal)
+    function netOk() {
+      return logado() &&
+        exists(/databases/$(database)/documents/network_members/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/network_members/$(request.auth.uid)).data.enabled == true;
+    }
+    match /network_members/{cid} {
+      allow read: if dono(cid) || admin();
+      allow write: if admin();
+    }
+    match /network_posts/{pid} {
+      allow read: if netOk() || admin();
+      allow create: if netOk() &&
+        request.resource.data.keys().hasOnly(['company','companyName','type','title','text','contact','createdAt']) &&
+        request.resource.data.company == request.auth.uid &&
+        request.resource.data.type in ['duvida','procuro','indico','permuta'] &&
+        request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100 &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000 &&
+        request.resource.data.contact is string && request.resource.data.contact.size() <= 40 &&
+        request.resource.data.companyName is string && request.resource.data.companyName.size() <= 100 &&
+        request.resource.data.createdAt == request.time;
+      allow delete: if (logado() && resource.data.company == request.auth.uid) || admin();
+      match /replies/{rid} {
+        allow read: if netOk() || admin();
+        allow create: if netOk() &&
+          request.resource.data.keys().hasOnly(['company','companyName','text','createdAt']) &&
+          request.resource.data.company == request.auth.uid &&
+          request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600 &&
+          request.resource.data.createdAt == request.time;
+        allow delete: if (logado() && resource.data.company == request.auth.uid) || admin();
+      }
+    }
+
     match /companies/{cid} {
       allow read: if dono(cid) || admin() || equipe(cid);
       allow create, update: if dono(cid);
