@@ -102,28 +102,51 @@ service cloud.firestore {
       allow read: if dono(cid) || admin();
       allow write: if admin();
     }
+    function postFields(d) {
+      return d.pub is bool &&
+        d.type in ['duvida','procuro','indico','permuta'] &&
+        d.title is string && d.title.size() > 0 && d.title.size() <= 100 &&
+        d.text is string && d.text.size() > 0 && d.text.size() <= 1000 &&
+        d.contact is string && d.contact.size() <= 40 &&
+        d.companyName is string && d.companyName.size() <= 100;
+    }
     match /network_posts/{pid} {
       allow read: if netOk() || admin() || resource.data.pub == true;
       allow create: if netOk() &&
         request.resource.data.keys().hasOnly(['company','companyName','type','title','text','contact','pub','createdAt']) &&
-        request.resource.data.pub is bool &&
         request.resource.data.company == request.auth.uid &&
-        request.resource.data.type in ['duvida','procuro','indico','permuta'] &&
-        request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 100 &&
-        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000 &&
-        request.resource.data.contact is string && request.resource.data.contact.size() <= 40 &&
-        request.resource.data.companyName is string && request.resource.data.companyName.size() <= 100 &&
+        postFields(request.resource.data) &&
         request.resource.data.createdAt == request.time;
+      // só quem criou edita, conclui ou reabre
+      allow update: if netOk() && resource.data.company == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['company','companyName','type','title','text','contact','pub','createdAt','done','doneAt','editedAt']) &&
+        request.resource.data.company == resource.data.company &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        (!request.resource.data.keys().hasAny(['done']) || request.resource.data.done is bool) &&
+        postFields(request.resource.data);
       allow delete: if (logado() && resource.data.company == request.auth.uid) || admin();
-      match /replies/{rid} {
-        allow read: if netOk() || admin();
-        allow create: if netOk() &&
-          request.resource.data.keys().hasOnly(['company','companyName','text','createdAt']) &&
-          request.resource.data.company == request.auth.uid &&
-          request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600 &&
-          request.resource.data.createdAt == request.time;
-        allow delete: if (logado() && resource.data.company == request.auth.uid) || admin();
-      }
+    }
+    // Conversas privadas: só quem publicou e quem respondeu (cada resposta é uma conversa de duas empresas)
+    match /network_msgs/{mid} {
+      allow read: if admin() || (netOk() && (resource.data.thread == request.auth.uid || resource.data.postCompany == request.auth.uid));
+      allow create: if netOk() &&
+        request.resource.data.keys().hasOnly(['post','postCompany','thread','company','companyName','text','createdAt']) &&
+        request.resource.data.company == request.auth.uid &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600 &&
+        request.resource.data.companyName is string && request.resource.data.companyName.size() <= 100 &&
+        request.resource.data.createdAt == request.time &&
+        get(/databases/$(database)/documents/network_posts/$(request.resource.data.post)).data.company == request.resource.data.postCompany &&
+        get(/databases/$(database)/documents/network_posts/$(request.resource.data.post)).data.get('done', false) == false &&
+        (request.resource.data.company == request.resource.data.postCompany || request.resource.data.thread == request.auth.uid);
+      allow update: if netOk() && resource.data.company == request.auth.uid &&
+        request.resource.data.keys().hasOnly(['post','postCompany','thread','company','companyName','text','createdAt','editedAt']) &&
+        request.resource.data.post == resource.data.post &&
+        request.resource.data.postCompany == resource.data.postCompany &&
+        request.resource.data.thread == resource.data.thread &&
+        request.resource.data.company == resource.data.company &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        request.resource.data.text is string && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 600;
+      allow delete: if admin() || (logado() && (resource.data.company == request.auth.uid || resource.data.postCompany == request.auth.uid));
     }
 
     match /companies/{cid} {
