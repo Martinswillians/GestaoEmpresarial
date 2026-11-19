@@ -105,6 +105,7 @@ a{color:var(--pl)}
 .auth form.card{margin-bottom:16px;padding:18px}
 .lgd{display:flex;flex-wrap:wrap;gap:6px 12px;margin:0 0 12px;font-size:12px;color:var(--mu)}.lgd span{display:flex;align-items:center;gap:6px}.lgd i{width:10px;height:10px;border-radius:3px;display:block}
 input[type=color]{height:42px;padding:4px}
+.dk{display:grid;grid-template-columns:repeat(auto-fill,minmax(125px,1fr));gap:8px}.dkc select{padding:6px;font-size:13px;margin-top:2px}.dkc select:disabled{opacity:.45}
 </style>
 </head>
 <body>
@@ -172,7 +173,7 @@ const DUR=[];for(let h=1;h<=10;h+=.5)DUR.push([h,h+'h']);
 const SCH={
  clients:{t:'cliente',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do cliente)','email'],['phone','Telefone / WhatsApp','tel'],['addr','Endereço','text'],['kind','Tipo de imóvel','select',['Apartamento','Casa','Sala comercial','Escritório','Outro']],['plan','Plano de limpeza','select',['Avulso','Semanal','Quinzenal','Mensal']],['days','Dias da limpeza','days'],['contract','Contrato','contract'],['color','Cor na agenda','color'],['obs','Observações','textarea']]},
  employees:{t:'funcionário(a)',f:()=>[['name','Nome','text'],['email','E-mail (para o futuro login do profissional)','email'],['role','Função','select',['Líder','Novato(a)']],['phone','Telefone','tel'],['obs','Observações','text']]},
- appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['service','Tipo de serviço','select',[['','Selecione...'],...D.services.map(s=>[s.id,s.name])]],['date','Data','date'],['time','Início','time'],['dur','Duração do serviço','select',DUR],['team','Par ou grupo de equipe','select',[['','Selecionar par...'],...D.teams.map(t=>[t.id,tName(t)])]],['emps','Equipe (pessoas)','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
+ appts:{t:'atendimento',def:{date:today(),time:'08:30',dur:4,freq:'Avulso',period:'M'},f:()=>[['client','Cliente','select',D.clients.map(c=>[c.id,c.name])],['service','Tipo de serviço','select',[['','Selecione...'],...D.services.map(s=>[s.id,s.name])]],['date','Data','date'],['time','Início','time'],['period','Período do dia','select',[['M','Manhã (amarelo)'],['T','Tarde (verde)'],['E','Encaixe (cinza)']]],['dur','Duração do serviço','select',DUR],['team','Par ou grupo de equipe','select',[['','Definir depois'],...D.teams.map(t=>[t.id,tName(t)])]],['emps','Equipe (pessoas) · deixe em branco para definir depois','emps'],['freq','Frequência','select',['Avulso','Semanal','Quinzenal','Mensal']],['price','Valor do serviço (R$)','number'],['uber','Deslocamento Uber, custo do dia (R$)','number'],['obs','Observações','textarea']]},
  teams:{t:'par ou grupo de equipe',f:()=>[['pname','Nome (opcional)','text'],['kind','Tipo','select',['Par','Grupo']],['members','Integrantes (Par: 2 pessoas · Grupo: 3 ou mais)','emps'],['obs','Observações','text']]},
  tx:{t:'lançamento',def:{date:today(),type:'despesa'},f:()=>[['type','Tipo','select',[['receita','Receita'],['despesa','Despesa']]],['desc','Descrição','text'],['amount','Valor (R$)','number'],['date','Data','date']]},
  services:{t:'tipo de serviço',def:{dur:4},f:()=>[['name','Nome do serviço','text'],['dur','Duração padrão','select',DUR],['price','Valor padrão (R$)','number'],['color','Cor na agenda','color'],['obs','Observações','text']]},
@@ -181,7 +182,7 @@ const SCH={
 };
 function fld(n,l,t,op,v,o){o=o||{};
  if(t==='emps')return`<fieldset><legend>${l}</legend>${D.employees.map(e=>`<label class="chk"><input type="checkbox" name="${n}" value="${e.id}" ${(v||[]).includes(e.id)?'checked':''}> ${esc(e.name)} <small>(${esc(e.role)})</small></label>`).join('')||'<small>Cadastre funcionários na aba Equipe.</small>'}</fieldset>`;
- if(t==='days')return`<fieldset><legend>${l}</legend><div class="wk">${WD.map((d,i)=>`<label class="chk"><input type="checkbox" name="${n}" value="${i}" ${(v||[]).includes(i)?'checked':''}> ${d}</label>`).join('')}</div></fieldset>`;
+ if(t==='days'){const sh=(o&&o.shifts)||{};return`<fieldset><legend>${l}</legend><div class="dk">${WD.map((d,i)=>{const on=(v||[]).includes(i);return`<div class="dkc"><label class="chk"><input type="checkbox" name="${n}" value="${i}" ${on?'checked':''} onchange="this.closest('.dkc').querySelector('select').disabled=!this.checked"> ${d}</label><select name="sh${i}" ${on?'':'disabled'}>${[['M','Manhã'],['T','Tarde'],['E','Encaixe']].map(([k,t2])=>`<option value="${k}" ${(sh[i]||'M')===k?'selected':''}>${t2}</option>`).join('')}</select></div>`}).join('')}</div><small class="mu">Escolha o período de cada dia. Na agenda: Manhã em amarelo, Tarde em verde, Encaixe em cinza.</small></fieldset>`}
  if(t==='perms')return`<fieldset><legend>${l}</legend>${PERMS.map(([k,n])=>`<label class="chk"><input type="checkbox" name="perms" value="${k}" ${(v||{})[k]?'checked':''}> ${n}</label>`).join('')}<small class="mu">O painel inicial sempre fica disponível.</small></fieldset>`;
  if(t==='contract')return ctrHTML(o,l);
  let i;
@@ -195,13 +196,14 @@ function edit(k,id,pre){
  const S=SCH[k];let o=id?D[k].find(x=>x.id===id):{...(S.def||{}),...(pre||{})};
  if(k==='teams'&&id&&!(o.members&&o.members.length))o={...o,members:tMem(o),kind:o.kind||'Par'};
  if((k==='clients'||k==='services')&&!o.color)o={...o,color:id?autoClr(id):nextClr(D[k])};
+ if(k==='appts'&&!o.period)o={...o,period:perOf(o)};
  $('#modal').innerHTML=`<div class="ov" onclick="if(event.target===this)closeM()"><form class="sheet" onsubmit="return save(event,'${k}','${id||''}')"><h3>${id?'Editar':'Novo'} ${S.t}</h3>${S.f().map(([n,l,t,op])=>fld(n,l,t,op,o[n],o)).join('')}<div class="end"><button type="button" class="ghost" onclick="closeM()">Cancelar</button><button class="btn">Salvar</button></div></form></div>`;
  if(k==='users'&&id)$('#modal input[name=email]').readOnly=true}
 const closeM=()=>$('#modal').innerHTML='';
 async function save(e,k,id){
  e.preventDefault();const F=e.target,d={};let gen=false;
- SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);else if(t==='perms'){d.perms={};PERMS.forEach(([k])=>d.perms[k]=!!F.querySelector('input[name="perms"][value="'+k+'"]:checked'))}
-  else if(t==='contract'){const g=x=>F.elements[x];d.contract=g('cOn').checked;d.cStart=g('cStart').value;d.cMonths=+g('cMonths').value||1;d.cTime=g('cTime').value;d.cDur=parseFloat(g('cDur').value)||4;d.cService=g('cService').value;d.cTeam=g('cTeam').value;d.cPrice=parseFloat(g('cPrice').value)||0;d.cUber=parseFloat(g('cUber').value)||0;gen=g('cGen').checked}
+ SCH[k].f().forEach(([n,,t])=>{if(t==='emps')d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>x.value);else if(t==='days'){d[n]=[...F.querySelectorAll(`input[name="${n}"]:checked`)].map(x=>+x.value);d.shifts={};d[n].forEach(i=>d.shifts[i]=F.elements['sh'+i].value)}else if(t==='perms'){d.perms={};PERMS.forEach(([k])=>d.perms[k]=!!F.querySelector('input[name="perms"][value="'+k+'"]:checked'))}
+  else if(t==='contract'){const g=x=>F.elements[x];d.contract=g('cOn').checked;d.cStart=g('cStart').value;d.cMonths=isNaN(+g('cMonths').value)?1:+g('cMonths').value;d.cTime=g('cTime').value;d.cDur=parseFloat(g('cDur').value)||4;d.cService=g('cService').value;d.cTeam=g('cTeam').value;d.cPrice=parseFloat(g('cPrice').value)||0;d.cUber=parseFloat(g('cUber').value)||0;gen=g('cGen').checked}
   else{const v=F.elements[n].value;d[n]=(t==='number'||n==='dur')?(parseFloat(v)||0):v}});
  if(k==='appts'){if(!id)d.status='pending';const tm=D.teams.find(x=>x.id===d.team);if(tm&&!tMem(tm).every(m=>d.emps.includes(m)))d.team='';const cc=D.clients.find(x=>x.id===d.client);d.cuid=(cc&&cc.uid)||''}
  if(k==='teams'){const m=d.members||[];if(d.kind==='Par'&&m.length!==2){toast('Um par precisa ter exatamente 2 integrantes.');return false}if(d.kind==='Grupo'&&m.length<3){toast('Um grupo precisa ter 3 ou mais integrantes.');return false}const E=m.map(i=>D.employees.find(e=>e.id===i)||{}),L=E.find(e=>e.role==='Líder')||E[0],R2=E.find(e=>e.id!==L.id)||{};d.leader=L.id||'';d.rookie=R2.id||'';d.pname=(d.pname||'').trim()||tName(d)}
@@ -236,7 +238,7 @@ async function done(id){
  try{await b.commit();toast('Atendimento concluído.'+(nx?' Próximo agendado para '+dbr(nx)+'.':''))}catch(x){toast(x.message)}}
 const apptActs=(a,tag=true)=>(a.status==='done'?(tag?'<span class="tag ok">Concluído</span>':''):a.status==='canceled'?`${tag?'<span class="tag er">Desmarcado</span>':''}<button onclick="reopen('${a.id}')">Reativar</button>`:`<button onclick="done('${a.id}')">Concluir</button><button onclick="postpone('${a.id}')">Adiar</button><button onclick="cancelAp('${a.id}')">Desmarcar</button>`)+`<button onclick="edit('appts','${a.id}')">Editar</button><button onclick="del('appts','${a.id}')">Excluir</button>`;
 function apptRow(a){const c=aCl(a),s=aSv(a),em=aEm(a);
- return`<div class="row ${a.status==='canceled'?'xx':''}" style="border-left:4px solid ${clrOf(a)};padding-left:10px"><div><b>${dbr(a.date)}, ${a.time} às ${endT(a.time,a.dur)}</b><div>${esc(c.name||'Cliente removido')} <span class="tag">${esc(a.freq||'Avulso')}</span>${s.name?` <span class="tag">${esc(s.name)}</span>`:''}${a.movedFrom&&a.movedFrom!==a.date?` <span class="tag wn">adiado de ${dbr(a.movedFrom)}</span>`:''}</div><small>${a.dur}h &middot; ${esc(em||'sem equipe')} &middot; ${R(a.price)} &middot; Uber ${R(a.uber)}</small></div><div class="acts">${apptActs(a)}</div></div>`}
+ return`<div class="row ${a.status==='canceled'?'xx':''}" style="border-left:4px solid ${clrOf(a)};padding-left:10px"><div><b>${dbr(a.date)}, ${a.time} às ${endT(a.time,a.dur)}</b><div>${esc(c.name||'Cliente removido')} <span class="tag">${esc(a.freq||'Avulso')}</span> <span class="tag">${PLBL[perOf(a)]}</span>${s.name?` <span class="tag">${esc(s.name)}</span>`:''}${a.movedFrom&&a.movedFrom!==a.date?` <span class="tag wn">adiado de ${dbr(a.movedFrom)}</span>`:''}</div><small>${a.dur}h &middot; ${esc(em||'sem equipe')} &middot; ${R(a.price)} &middot; Uber ${R(a.uber)}</small></div><div class="acts">${apptActs(a)}</div></div>`}
 
 /* ---------- Financeiro ---------- */
 const txM=()=>D.tx.filter(x=>(x.date||'').startsWith(mon)).sort((a,b)=>b.date.localeCompare(a.date));
@@ -261,10 +263,10 @@ const VIEW={
   addD0=AG.view==='day'?AG.a:(today()>=f&&today()<=t?today():f);
   return`<div class="bar" style="flex-wrap:wrap"><div class="seg sm">${[['day','Dia'],['week','Semana'],['month','Mês']].map(([k,l])=>`<button type="button" class="${AG.view===k?'on':''}" onclick="AG.view='${k}';if('${k}'==='month')AG.sel=AG.a;render()">${l}</button>`).join('')}</div><span class="acts" style="align-items:center"><button class="ghost" onclick="agGo(-1)">&lsaquo;</button><button class="ghost" onclick="agToday()">Hoje</button><b class="agl">${agLbl()}</b><button class="ghost" onclick="agGo(1)">&rsaquo;</button></span></div>
 <div class="bar" style="flex-wrap:wrap">${whoSel(AG.who,'agWho')}<span class="acts"><button class="ghost" onclick="shareAg('${f}','${t}','${AG.who}',false)">Compartilhar</button><button class="btn" onclick="edit('appts','',{date:'${addD0}'})">Novo atendimento</button></span></div>
-<div class="bar" style="flex-wrap:wrap"><div class="seg sm"><span style="align-self:center;padding:0 8px;color:var(--mu);font-size:12px">Cores por</span>${[['client','Cliente'],['svc','Serviço']].map(([k,l])=>`<button type="button" class="${AG.col===k?'on':''}" onclick="AG.col='${k}';render()">${l}</button>`).join('')}</div></div>${lgdHTML(rows)}<div class="chips">${AG.view==='day'?`<span class="chip2"><i class="${act.length?'p':'g'}"></i><b>${act.length}</b> atendimento(s) &middot; ${hrs}h agendadas</span>`:`<span class="chip2"><i class="g"></i><b>${nf}</b> dias livres ${per}</span><span class="chip2"><i class="p"></i><b>${nb}</b> dias com serviço agendado</span>`}</div>${view}
+<div class="bar" style="flex-wrap:wrap"><div class="seg sm"><span style="align-self:center;padding:0 8px;color:var(--mu);font-size:12px">Cores por</span>${[['per','Período'],['client','Cliente'],['svc','Serviço']].map(([k,l])=>`<button type="button" class="${AG.col===k?'on':''}" onclick="AG.col='${k}';render()">${l}</button>`).join('')}</div></div>${lgdHTML(rows)}<div class="chips">${AG.view==='day'?`<span class="chip2"><i class="${act.length?'p':'g'}"></i><b>${act.length}</b> atendimento(s) &middot; ${hrs}h agendadas</span>`:`<span class="chip2"><i class="g"></i><b>${nf}</b> dias livres ${per}</span><span class="chip2"><i class="p"></i><b>${nb}</b> dias com serviço agendado</span>`}</div>${view}
 <section class="card"><h3>Exportar disponibilidade</h3><p class="mu" style="margin-top:0">Gera uma lista dia a dia (Livre / Ocupado, com os serviços de cada dia) a partir da data em que você está navegando acima.${AG.who?' Considera só a equipe/funcionário filtrado.':''}</p><div class="bar" style="margin:0"><div class="seg sm">${[['week','Semana'],['month','Mês'],['year','Ano']].map(([k,l])=>`<button type="button" class="${AG.exp===k?'on':''}" onclick="AG.exp='${k}';render()">${l}</button>`).join('')}</div><span class="acts"><button class="ghost" onclick="expAvail('pdf')">PDF</button><button class="ghost" onclick="expAvail('csv')">CSV</button></span></div></section>
 <section class="card"><h3>Serviços &mdash; ${agLbl()}</h3><p class="mu" style="margin-top:0">${act.length} compromisso(s) em ${nb} dia(s) &middot; ${hrs}h agendadas</p><div class="tw"><table class="tb"><thead><tr><th>Data</th><th>Dia</th><th>Horário</th><th>Serviço</th><th>Cliente</th><th>Equipe</th><th>Status</th><th></th></tr></thead><tbody>${rows.map(a=>`<tr class="${a.status==='canceled'?'xx':''}"><td>${dbr(a.date)}</td><td>${WD[dow(a.date)]}</td><td>${a.time}&ndash;${endT(a.time,a.dur)} <small>(${a.dur}h)</small></td><td>${esc(aSv(a).name||'—')}</td><td>${esc(aCl(a).name||'—')}</td><td>${esc(aTm(a)||'—')}</td><td><span class="tag ${stCls(a)}">${stLbl(a)}</span>${a.movedFrom&&a.movedFrom!==a.date?` <small>adiado de ${dbr(a.movedFrom)}</small>`:''}</td><td><div class="acts">${apptActs(a,false)}</div></td></tr>`).join('')||'<tr><td colspan="8" class="mu">Nenhum atendimento neste período.</td></tr>'}</tbody></table></div></section>`},
- clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>{const ca=D.appts.filter(a=>a.contract===c.id),cd=ca.filter(a=>a.status==='done').length,cp=ca.filter(a=>a.status==='pending').length;return`<div class="row"><div><b><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color||autoClr(c.id)};margin-right:6px"></i>${esc(c.name)}</b>${c.uid?' <span class="tag ok">Com login</span>':''}${c.contract?' <span class="tag">Contrato</span>':''}<small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')} ${esc(c.email||'')}</small><small>Plano ${esc(c.plan||'Avulso')}${c.days&&c.days.length?' &middot; '+c.days.map(i=>WD[i]).join(', '):''}</small>${c.contract?`<small>Contrato desde ${dbr(c.cStart)} &middot; ${c.cMonths} ${c.cMonths>1?'meses':'mês'} &middot; ${esc(c.cTime||'')} &middot; ${cp} pendente(s), ${cd} concluído(s)</small>`:''}</div><div class="acts"><button onclick="agendar('${c.id}')">Agendar</button><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`}).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
+ clients:()=>`<div class="bar"><h3>Clientes</h3><button class="btn" onclick="edit('clients')">Novo cliente</button></div><section class="card">${D.clients.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(c=>{const ca=D.appts.filter(a=>a.contract===c.id),cd=ca.filter(a=>a.status==='done').length,cp=ca.filter(a=>a.status==='pending').length;return`<div class="row"><div><b><i style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${c.color||autoClr(c.id)};margin-right:6px"></i>${esc(c.name)}</b>${c.uid?' <span class="tag ok">Com login</span>':''}${c.contract?' <span class="tag">Contrato</span>':''}<small>${esc(c.kind||'')} &middot; ${esc(c.addr||'sem endereço')}</small><small>${esc(c.phone||'')} ${esc(c.email||'')}</small><small>Plano ${esc(c.plan||'Avulso')}${c.days&&c.days.length?' &middot; '+c.days.map(i=>WD[i]+(c.shifts&&c.shifts[i]?' ('+PLBL[c.shifts[i]].toLowerCase()+')':'')).join(', '):''}</small>${c.contract?`<small>Contrato desde ${dbr(c.cStart)} &middot; ${+c.cMonths===0?'tempo indeterminado':c.cMonths+' '+(c.cMonths>1?'meses':'mês')} &middot; ${esc(c.cTime||'')} &middot; ${cp} pendente(s), ${cd} concluído(s)</small>`:''}</div><div class="acts"><button onclick="agendar('${c.id}')">Agendar</button><button onclick="edit('clients','${c.id}')">Editar</button><button onclick="del('clients','${c.id}')">Excluir</button></div></div>`}).join('')||'<p class="mu">Nenhum cliente cadastrado.</p>'}</section>`,
  employees:()=>`<div class="bar" style="flex-wrap:wrap"><h3>Equipe</h3><span class="acts"><button class="ghost" onclick="edit('teams','',{kind:'Par'})">Novo par</button><button class="ghost" onclick="edit('teams','',{kind:'Grupo'})">Novo grupo</button><button class="btn" onclick="edit('employees')">Novo funcionário</button></span></div><section class="card"><h3>Pares e grupos de equipe</h3>${D.teams.map(t=>{return`<div class="row"><div><b>${esc(tName(t))}</b> <span class="tag">${esc(t.kind||'Par')}</span><small>${tMem(t).map(i=>{const e=D.employees.find(x=>x.id===i);return e?esc(e.name)+' ('+esc(e.role)+')':'removido'}).join(' &middot; ')}</small>${t.obs?`<small>${esc(t.obs)}</small>`:''}</div><div class="acts"><button onclick="edit('teams','${t.id}')">Editar</button><button onclick="del('teams','${t.id}')">Excluir</button></div></div>`}).join('')||'<p class="mu">Nenhum par ou grupo criado. Monte pares (2 pessoas) ou grupos (3 ou mais) para escalar nos atendimentos.</p>'}</section><section class="card"><h3>Funcionários</h3>${D.employees.slice().sort((a,b)=>a.role.localeCompare(b.role)||a.name.localeCompare(b.name)).map(e=>`<div class="row"><div><b>${esc(e.name)}</b> <span class="tag">${esc(e.role)}</span><small>${esc(e.email||'')}</small><small>${esc(e.phone||'')} ${esc(e.obs||'')}</small></div><div class="acts"><button onclick="edit('employees','${e.id}')">Editar</button><button onclick="del('employees','${e.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Nenhum funcionário cadastrado.</p>'}</section>`,
  services:()=>`<div class="bar"><h3>Tipos de serviço</h3><button class="btn" onclick="edit('services')">Novo tipo</button></div><section class="card">${D.services.slice().sort((a,b)=>a.name.localeCompare(b.name)).map(s=>`<div class="row"><div><b>${esc(s.name)}</b><small>${s.dur}h &middot; ${R(s.price)}</small></div><div class="acts"><button onclick="edit('services','${s.id}')">Editar</button><button onclick="del('services','${s.id}')">Excluir</button></div></div>`).join('')||'<p class="mu">Cadastre os serviços que a empresa oferece, como limpeza de apartamento, estofados ou pós-obra.</p>'}</section>`,
  fin:()=>{const t=txM(),r=sum(t,'receita'),d=sum(t,'despesa');
@@ -297,12 +299,15 @@ const tName=t=>t.pname||tMem(t).map(i=>((D.employees.find(e=>e.id===i)||{}).name
 const stLbl=a=>a.status==='done'?'Concluído':a.status==='canceled'?'Desmarcado':'Pendente';
 const stCls=a=>a.status==='done'?'ok':a.status==='canceled'?'er':'wn';
 const aCl=a=>D.clients.find(c=>c.id===a.client)||{};
+const PERC={M:'#f5d90a',T:'#40c057',E:'#868e96'},PLBL={M:'Manhã',T:'Tarde',E:'Encaixe'};
+const perOf=a=>a.period||(String(a.time||'')<'12:00'?'M':'T');
 const PALC=['#d6336c','#1c7ed6','#2f9e44','#f08c00','#7048e8','#0c8599','#e8590c','#5c940d','#c2255c','#364fc7','#087f5b','#a61e4d','#9c36b5','#1098ad'];
 const hsh=x=>{let h=0;for(const c of String(x))h=(h*31+c.charCodeAt(0))>>>0;return h};
 const autoClr=id=>PALC[hsh(id)%PALC.length];
 const nextClr=L=>{const u=new Set(L.map(c=>c.color).filter(Boolean));return PALC.find(c=>!u.has(c))||PALC[Math.floor(Math.random()*PALC.length)]};
-const clrOf=a=>AG.col==='svc'?(aSv(a).color||autoClr(a.service||'-')):(aCl(a).color||autoClr(a.client||'-'));
-const lgdHTML=rows=>{const m=new Map();rows.filter(a=>a.status!=='canceled').forEach(a=>{const k=AG.col==='svc'?(a.service||'-'):(a.client||'-'),n=AG.col==='svc'?(aSv(a).name||'Sem tipo'):(aCl(a).name||'Cliente removido');if(!m.has(k))m.set(k,[n,clrOf(a)])});return m.size?`<div class="lgd">${[...m.values()].map(([n,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}</div>`:''};
+const bgOf=a=>clrOf(a)+(AG.col==='per'?'73':'22');
+const clrOf=a=>AG.col==='per'?PERC[perOf(a)]:AG.col==='svc'?(aSv(a).color||autoClr(a.service||'-')):(aCl(a).color||autoClr(a.client||'-'));
+const lgdHTML=rows=>{if(AG.col==='per')return`<div class="lgd">${Object.keys(PERC).map(k=>`<span><i style="background:${PERC[k]}"></i>${PLBL[k]}</span>`).join('')}</div>`;const m=new Map();rows.filter(a=>a.status!=='canceled').forEach(a=>{const k=AG.col==='svc'?(a.service||'-'):(a.client||'-'),n=AG.col==='svc'?(aSv(a).name||'Sem tipo'):(aCl(a).name||'Cliente removido');if(!m.has(k))m.set(k,[n,clrOf(a)])});return m.size?`<div class="lgd">${[...m.values()].map(([n,c])=>`<span><i style="background:${c}"></i>${esc(n)}</span>`).join('')}</div>`:''};
 const aSv=a=>D.services.find(s=>s.id===a.service)||{};
 const aEm=a=>(a.emps||[]).map(i=>(D.employees.find(e=>e.id===i)||{}).name).filter(Boolean).join(', ');
 const aTm=a=>{const t=D.teams.find(x=>x.id===a.team);return t?tName(t):aEm(a)};
@@ -330,16 +335,16 @@ function dsGo(n){const{mode:m,a,b}=DS;
 const dsWho=v=>{DS.who=v;render()},agWho=v=>{AG.who=v;render()};
 
 /* Agenda */
-let AG={view:'week',a:today(),who:'',exp:'week',sel:today(),col:'client'};
+let AG={view:'week',a:today(),who:'',exp:'week',sel:today(),col:'per'};
 const agSel=d=>{AG.sel=d;render();setTimeout(()=>{const e=$('#dayp');if(e)e.scrollIntoView({behavior:'smooth',block:'nearest'})},60)};
 const agToday=()=>{AG.a=AG.sel=today();render()};
 function agRange(){const{view:v,a}=AG;if(v==='day')return[a,a];if(v==='week')return[wkS(a),addD(wkS(a),6)];return[a.slice(0,7)+'-01',monEnd(a)]}
 function agGo(n){const{view:v,a}=AG;AG.a=v==='day'?addD(a,n):v==='week'?addD(a,7*n):ymShift(a.slice(0,7),n)+'-01';if(v==='month')AG.sel=null;render()}
 function agLbl(){const[f,t]=agRange();return AG.view==='day'?WD[dow(f)]+', '+dbr(f):AG.view==='week'?dbr(f)+' – '+dbr(t):cap(MESES[+AG.a.slice(5,7)-1])+' '+AG.a.slice(0,4)}
-const cardAp=a=>`<div class="ac ${a.status||'pending'}" style="border-left-color:${clrOf(a)};background:${clrOf(a)}22" onclick="edit('appts','${a.id}')"><b>${esc(aCl(a).name||'Cliente removido')}${aSv(a).name?' - '+esc(aSv(a).name):''}</b><small>${a.time}–${endT(a.time,a.dur)} · ${a.dur}h</small>${aTm(a)?`<small>${esc(aTm(a))}</small>`:''}${a.status==='done'||a.status==='canceled'?`<small class="st ${stCls(a)}">${stLbl(a)}</small>`:''}</div>`;
+const cardAp=a=>`<div class="ac ${a.status||'pending'}" style="border-left-color:${clrOf(a)};background:${bgOf(a)}" onclick="edit('appts','${a.id}')"><b>${esc(aCl(a).name||'Cliente removido')}${aSv(a).name?' - '+esc(aSv(a).name):''}</b><small>${a.time}–${endT(a.time,a.dur)} · ${a.dur}h</small>${aTm(a)?`<small>${esc(aTm(a))}</small>`:''}${a.status==='done'||a.status==='canceled'?`<small class="st ${stCls(a)}">${stLbl(a)}</small>`:''}</div>`;
 const gridView=days=>`<div class="wg ${days.length===1?'one':''}">${days.map(d=>{const L=inR(d,d,AG.who).sort(cmpA),act=L.filter(a=>a.status!=='canceled');return`<div class="dc ${d===today()?'td':''}"><div class="dh"><span>${WD[dow(d)]}</span><b>${+d.slice(8)}</b></div>${act.length?'':'<div class="fr">Livre</div>'}${L.map(cardAp).join('')}<button class="add" onclick="edit('appts','',{date:'${d}'})">+ Adicionar</button></div>`}).join('')}</div>`;
 const dayPanel=(f,t)=>{const d=AG.sel;if(!d||d<f||d>t)return'<p class="mu" style="margin:0 0 12px">Toque em um dia para ver os serviços dele logo abaixo.</p>';const L=inR(d,d,AG.who).sort(cmpA);return`<section class="card" id="dayp"><div class="bar"><h3 style="margin:0">${WD[dow(d)]}, ${dbr(d)}</h3><span class="acts"><button class="ghost" onclick="shareAg('${d}','${d}','${AG.who}',false)">Compartilhar</button><button class="btn" onclick="edit('appts','',{date:'${d}'})">Novo atendimento</button></span></div>${L.map(apptRow).join('')||'<p class="mu">Livre &mdash; nenhum atendimento neste dia.</p>'}</section>`};
-const moView=(f,t)=>{const days=daysIn(wkS(f),addD(wkS(t),6));return`<div class="mg">${WD.map(d=>`<div class="mh">${d}</div>`).join('')}${days.map(d=>{if(d<f||d>t)return'<div class="mc out"></div>';const L=inR(d,d,AG.who).filter(a=>a.status!=='canceled').sort(cmpA);return`<button class="mc ${d===today()?'td':''} ${d===AG.sel?'sel':''}" onclick="agSel('${d}')"><b>${+d.slice(8)}</b>${L.slice(0,2).map(a=>`<span class="chip" style="border-left-color:${clrOf(a)};background:${clrOf(a)}33">${a.time} ${esc((aCl(a).name||'').split(' ')[0])}</span>`).join('')}${L.length>2?`<span class="chip">+${L.length-2}</span>`:''}${L.length?`<span class="cnt">${L.length}</span>`:'<span class="fr">Livre</span>'}</button>`}).join('')}</div>`};
+const moView=(f,t)=>{const days=daysIn(wkS(f),addD(wkS(t),6));return`<div class="mg">${WD.map(d=>`<div class="mh">${d}</div>`).join('')}${days.map(d=>{if(d<f||d>t)return'<div class="mc out"></div>';const L=inR(d,d,AG.who).filter(a=>a.status!=='canceled').sort(cmpA);return`<button class="mc ${d===today()?'td':''} ${d===AG.sel?'sel':''}" onclick="agSel('${d}')"><b>${+d.slice(8)}</b>${L.slice(0,2).map(a=>`<span class="chip" style="border-left-color:${clrOf(a)};background:${bgOf(a)}">${a.time} ${esc((aCl(a).name||'').split(' ')[0])}</span>`).join('')}${L.length>2?`<span class="chip">+${L.length-2}</span>`:''}${L.length?`<span class="cnt">${L.length}</span>`:'<span class="fr">Livre</span>'}</button>`}).join('')}</div>`};
 function availRows(){const a=AG.a,k=AG.exp,[f,t]=k==='week'?[wkS(a),addD(wkS(a),6)]:k==='month'?[a.slice(0,7)+'-01',monEnd(a)]:[a.slice(0,4)+'-01-01',a.slice(0,4)+'-12-31'];
  return{f,t,rows:daysIn(f,t).map(d=>{const L=inR(d,d,AG.who).filter(x=>x.status!=='canceled').sort(cmpA);return{'Data':dbr(d),'Dia':WD[dow(d)],'Situação':L.length?'Ocupado':'Livre','Serviços':L.map(x=>x.time+' '+(aCl(x).name||'')+(aSv(x).name?' - '+aSv(x).name:'')).join(' | ')}})}}
 function expAvail(fmt){const{f,t,rows}=availRows(),ttl='Disponibilidade '+dbr(f)+' a '+dbr(t)+(AG.who?' - '+whoLbl(AG.who):'');
@@ -384,26 +389,39 @@ function teamFill(s){const t=D.teams.find(x=>x.id===s.value);if(!t)return;s.form
 
 /* Contrato de cliente: marca as datas na agenda */
 const nthWd=(y,m,wd,n)=>{const d=new Date(y,m,1,12);d.setDate(1+(wd-d.getDay()+7)%7+(n-1)*7);return d};
+const IND_D=90;
 function contractDates(c){
- const st=new Date(c.cStart+'T12:00'),en=new Date(st);en.setMonth(en.getMonth()+(+c.cMonths||1));const days=c.days||[],out=[];
+ const ind=+c.cMonths===0,st=new Date(c.cStart+'T12:00');let en=new Date(st);
+ if(ind){en=new Date(Math.max(st.getTime(),new Date(today()+'T12:00').getTime()));en.setDate(en.getDate()+IND_D)}else en.setMonth(en.getMonth()+(+c.cMonths||1));
+ const days=c.days||[],out=[],fin=o=>ind?o.filter(d=>d>=today()):o;
  if(c.plan==='Mensal'){const f=new Date(st);for(let i=0;i<7&&!days.includes(f.getDay());i++)f.setDate(f.getDate()+1);
   const n=Math.min(4,Math.ceil(f.getDate()/7)),wd=f.getDay();
-  for(let k=0;k<24;k++){const x=nthWd(f.getFullYear(),f.getMonth()+k,wd,n);if(x>=en)break;if(x>=st)out.push(ymd(x))}
-  return out}
+  for(let k=0;k<(ind?600:24);k++){const x=nthWd(f.getFullYear(),f.getMonth()+k,wd,n);if(x>=en)break;if(x>=st)out.push(ymd(x))}
+  return fin(out)}
  const step=c.plan==='Quinzenal'?2:1,ws=new Date(wkS(c.cStart)+'T12:00');
  for(let d=new Date(st);d<en;d.setDate(d.getDate()+1)){const w=Math.floor(Math.round((d-ws)/864e5)/7);if(days.includes(d.getDay())&&w%step===0)out.push(ymd(d))}
- return out}
+ return fin(out)}
 async function genContract(cid,c){
  const mine=D.appts.filter(a=>a.contract===cid),keep=new Set(mine.filter(a=>a.status!=='pending').map(a=>a.date)),pend=mine.filter(a=>a.status==='pending');
  if(pend.length&&!confirm('Este contrato já tem '+pend.length+' data(s) pendente(s) na agenda. Substituir pelas novas datas? (adiamentos feitos nelas serão perdidos)')){toast('Cliente salvo. A agenda do contrato não foi alterada.');return}
  const tm=D.teams.find(x=>x.id===c.cTeam),emps=tm?tMem(tm):[],ds=contractDates(c).filter(d=>!keep.has(d)),base=col('appts'),ops=[];
  pend.forEach(a=>ops.push(b=>b.delete(base.doc(a.id))));
- ds.forEach(d=>ops.push(b=>b.set(base.doc(),{client:cid,service:c.cService||'',date:d,time:c.cTime||'08:00',dur:c.cDur||4,emps,team:tm?tm.id:'',freq:'Contrato',contract:cid,cuid:((D.clients.find(x=>x.id===cid)||{}).uid||''),price:c.cPrice||0,uber:c.cUber||0,obs:'',status:'pending',createdAt:TS()})));
+ ds.forEach(d=>ops.push(b=>b.set(base.doc(),mkContractAppt(cid,c,d,tm,emps))));
  try{for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(f=>f(b));await b.commit()}toast(ds.length+' data(s) marcada(s) na agenda.')}catch(x){toast('Erro ao marcar a agenda: '+x.message)}}
+const mkContractAppt=(cid,c,d,tm,emps)=>({client:cid,service:c.cService||'',date:d,time:c.cTime||'08:00',period:(c.shifts||{})[dow(d)]||'M',dur:c.cDur||4,emps,team:tm?tm.id:'',freq:'Contrato',contract:cid,cuid:((D.clients.find(x=>x.id===cid)||{}).uid||''),price:c.cPrice||0,uber:c.cUber||0,obs:'',status:'pending',createdAt:TS()});
+let LD={},TOPPED=false,NEEDN=99;
+function ctrTopUp(){if(TOPPED||!can('agenda')||Object.keys(LD).length<NEEDN)return;TOPPED=true;
+ const base=col('appts'),ops=[];
+ D.clients.filter(c=>c.contract&&+c.cMonths===0&&c.cGenerated).forEach(c=>{
+  const have=new Set();D.appts.filter(a=>a.contract===c.id).forEach(a=>{have.add(a.date);if(a.movedFrom)have.add(a.movedFrom)});
+  const tm=D.teams.find(x=>x.id===c.cTeam),emps=tm?tMem(tm):[];
+  contractDates(c).filter(d=>!have.has(d)).forEach(d=>ops.push(b=>b.set(base.doc(),mkContractAppt(c.id,c,d,tm,emps))))});
+ if(!ops.length)return;
+ (async()=>{try{for(let i=0;i<ops.length;i+=400){const b=db.batch();ops.slice(i,i+400).forEach(f=>f(b));await b.commit()}toast(ops.length+' data(s) de contratos por tempo indeterminado marcada(s) na agenda.')}catch(x){}})()}
 function ctrHTML(o,l){const op=(arr,v)=>arr.map(([a,b])=>`<option value="${esc(a)}" ${a==v?'selected':''}>${esc(b)}</option>`).join('');
  return`<fieldset><legend>${l}</legend><label class="chk"><input type="checkbox" name="cOn" ${o.contract?'checked':''} onchange="this.closest('fieldset').querySelector('.cbox').style.display=this.checked?'block':'none'"> Cliente com contrato</label><div class="cbox" style="display:${o.contract?'block':'none'}"><p class="mu" style="margin:0">Usa o plano e os dias da limpeza escolhidos acima. Ex.: plano Semanal + Sex, 2 meses, 10:00.</p>
  <label>Início do contrato<input name="cStart" type="date" value="${esc(o.cStart||today())}"></label>
- <label>Duração do contrato<select name="cMonths">${op([1,2,3,4,5,6,9,12].map(n=>[n,n+(n>1?' meses':' mês')]),o.cMonths||1)}</select></label>
+ <label>Duração do contrato<select name="cMonths">${op([[0,'Tempo indeterminado'],...[1,2,3,4,5,6,9,12].map(n=>[n,n+(n>1?' meses':' mês')])],(o.cMonths===undefined||o.cMonths===null||o.cMonths==='')?1:o.cMonths)}</select></label>
  <label>Horário de início<input name="cTime" type="time" value="${esc(o.cTime||'10:00')}"></label>
  <label>Duração de cada visita<select name="cDur">${op(DUR,o.cDur||4)}</select></label>
  <label>Tipo de serviço<select name="cService">${op([['','Selecione...'],...D.services.map(s=>[s.id,s.name])],o.cService||'')}</select></label>
@@ -484,10 +502,10 @@ function logoPick(inp){const fl=inp.files[0];if(!fl)return;const r=new FileReade
 function logoDel(b){const F=b.form.elements;F.logo.value='';F.logoR.value='';$('#lgp').style.display='none'}
 function pdfHead(p,t){let x=14;if(CO.logo){const h=12,w=h*(CO.logoR||1);try{p.addImage(CO.logo,CO.logo.startsWith('data:image/png')?'PNG':'JPEG',14,8,w,h);x=14+w+4}catch(e){}}
  p.setFontSize(14);p.text(CO.name,x,14);if(CO.slogan){p.setFontSize(9);p.text(CO.slogan,x,19)}p.setFontSize(12);p.text(t,14,28);return 33}
-function planFill(s){const c=D.clients.find(x=>x.id===s.value),f=s.form.elements.freq;if(c&&c.plan&&f)f.value=c.plan}
+function planFill(s){const c=D.clients.find(x=>x.id===s.value),F=s.form.elements;if(!c)return;if(c.plan&&F.freq)F.freq.value=c.plan;const w=(F.date&&F.date.value)?dow(F.date.value):null,p=w!==null&&c.shifts&&c.shifts[w];if(p&&F.period)F.period.value=p}
 function agendar(id){const c=D.clients.find(x=>x.id===id),d=new Date();
  if(c.days&&c.days.length){for(let i=0;i<8;i++){if(c.days.includes(d.getDay()))break;d.setDate(d.getDate()+1)}}
- edit('appts','',{client:id,freq:c.plan||'Avulso',date:ymd(d)})}
+ edit('appts','',{client:id,freq:c.plan||'Avulso',date:ymd(d),period:(c.shifts&&c.shifts[d.getDay()])||'M'})}
 function render(){
  if(!U||!CO)return;
  const sc=($('main')||{}).scrollTop||0,nR=D.reqs.filter(q=>q.status==='new').length,tabs=(isAdmin?[...TABS,['admin','Admin do portal','👑','own']]:TABS).filter(t=>!t[3]||(t[3]==='own'?!STAFF:t[3]==='net'?(!STAFF&&(NET||isAdmin)):can(t[3])));
@@ -512,7 +530,7 @@ async function approve(id){const q=D.reqs.find(x=>x.id===id),sv=D.services.find(
  if(cl){cid=cl.id;cu=cu||cl.uid||'';const up={};if(q.uid&&cl.uid!==q.uid)up.uid=q.uid;['phone','addr','email'].forEach(k=>{if(!cl[k]&&q[k])up[k]=q[k]});if(Object.keys(up).length)b.update(db.doc(base+'clients/'+cid),up);
   if(q.uid&&cl.uid!==q.uid)D.appts.filter(x=>x.client===cid).forEach(x=>b.update(db.doc(base+'appts/'+x.id),{cuid:q.uid}))}
  else{const cr=db.collection(base+'clients').doc();cid=cr.id;b.set(cr,{name:q.name,phone:q.phone,email:q.email||'',addr:q.addr||'',kind:'',plan:'Avulso',days:[],obs:'',color:nextClr(D.clients),createdAt:TS(),...(q.uid?{uid:q.uid}:{})})}
- b.set(db.collection(base+'appts').doc(),{client:cid,service:q.svc||'',date:q.date,time:q.time,dur:sv?sv.dur:4,emps:[],team:'',freq:'Avulso',price:sv?(sv.price||0):0,uber:0,obs:q.obs||'',addr:q.addr||'',status:'pending',createdAt:TS(),cuid:cu});
+ b.set(db.collection(base+'appts').doc(),{client:cid,service:q.svc||'',date:q.date,time:q.time,dur:sv?sv.dur:4,emps:[],team:'',freq:'Avulso',price:sv?(sv.price||0):0,uber:0,obs:q.obs||'',addr:q.addr||'',period:(q.time<'12:00'?'M':'T'),status:'pending',createdAt:TS(),cuid:cu});
  b.update(db.doc(base+'requests/'+id),{status:'approved'});if(q.uid)b.update(db.doc('customers/'+q.uid+'/requests/'+id),{status:'approved'});
  try{await b.commit();toast(cl?'Cliente já cadastrado: agendamento criado no cadastro existente.':'Cliente novo cadastrado e agendamento criado.')}catch(x){toast(x.message)}}
 /* espelho dos agendamentos para a área do cliente */
@@ -644,7 +662,7 @@ async function resetPw(){const em=document.querySelector('input[name=email]').va
 
 /* ---------- Inicialização ---------- */
 async function boot(u){
- subs.forEach(f=>f());subs=[];stopCR();CLI=null;apFirst=true;if(netUn){netUn();netUn=null}NET=false;stLast='';ADMT=0;ADM={};ADS=null;U=u;CID=u?u.uid:null;STAFF=false;PERM={};
+ subs.forEach(f=>f());subs=[];stopCR();CLI=null;apFirst=true;LD={};TOPPED=false;if(netUn){netUn();netUn=null}NET=false;stLast='';ADMT=0;ADM={};ADS=null;U=u;CID=u?u.uid:null;STAFF=false;PERM={};
  Object.keys(D).forEach(k=>{if(k!=='ann'&&k!=='netPub')D[k]=[]});
  if(!u){CO=null;isAdmin=false;tab='home';return renderAuth()}
  let g=null;try{g=await db.doc('companies/'+u.uid).get()}catch(e){}
@@ -655,7 +673,7 @@ async function boot(u){
  try{isAdmin=!STAFF&&(await db.doc('admins/'+u.uid).get()).exists}catch(e){isAdmin=false}
  if(!CO.name)CO.name=u.email;if(!STAFF&&g&&g.exists)db.doc('companies/'+CID).set({lastActive:TS()},{merge:true}).catch(()=>{});MODE=CO.mode||'light';PALK=(CO.palette&&PAL[CO.palette])?CO.palette:'grafite';ls('gm',MODE);ls('gp',PALK);applyTheme();
  const need=new Set();if(can('agenda'))['appts','reqs','clients','employees','services','teams'].forEach(k=>need.add(k));if(can('clients'))need.add('clients');if(can('employees')){need.add('employees');need.add('teams')}if(can('services'))need.add('services');if(can('fin'))need.add('tx');
- need.forEach(k=>subs.push(col(k).onSnapshot(sn=>{D[k]=sn.docs.map(d=>({id:d.id,...d.data()}));if(k==='services')syncPublic();if(k==='appts')custSync(sn);render()},e=>toast('Erro: '+e.message))));
+ NEEDN=need.size;need.forEach(k=>subs.push(col(k).onSnapshot(sn=>{D[k]=sn.docs.map(d=>({id:d.id,...d.data()}));if(k==='services')syncPublic();if(k==='appts')custSync(sn);LD[k]=1;ctrTopUp();render()},e=>toast('Erro: '+e.message))));
  if(!STAFF)subs.push(db.collection('invites').where('company','==',CID).onSnapshot(sn=>{D.users=sn.docs.map(d=>({id:d.id,...d.data()}));render()},()=>{}));
  if(!STAFF)subs.push(db.doc('network_members/'+CID).onSnapshot(s=>{const v=s.exists&&s.data().enabled===true;if(v!==NET){NET=v;netWatch()}render()},()=>{}));
  if(isAdmin){netWatch();subs.push(db.collection('network_members').onSnapshot(sn=>{D.nm=sn.docs.filter(d=>d.data().enabled).map(d=>d.id);render()},()=>{}))}
