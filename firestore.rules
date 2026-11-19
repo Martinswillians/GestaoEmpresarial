@@ -57,6 +57,13 @@ service cloud.firestore {
         allow update: if (dono(resource.data.company) || perm(resource.data.company, 'agenda')) &&
           request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status']);
       }
+      // Serviços agendados, espelhados pela empresa para o cliente acompanhar
+      match /appts/{aid} {
+        allow read: if logado() && request.auth.uid == uid;
+        allow create, update: if (dono(request.resource.data.company) || perm(request.resource.data.company, 'agenda')) &&
+          request.resource.data.keys().hasOnly(['company','companyName','svcName','date','time','dur','status','team','addr']);
+        allow delete: if dono(resource.data.company) || perm(resource.data.company, 'agenda');
+      }
     }
 
     match /admins/{uid} {
