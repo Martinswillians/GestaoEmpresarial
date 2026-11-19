@@ -43,7 +43,9 @@ service cloud.firestore {
     match /customers/{uid} {
       allow read: if logado() && request.auth.uid == uid;
       allow create, update: if logado() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['email','name','phone','createdAt']) &&
+        request.resource.data.keys().hasOnly(['email','name','phone','addr','cos','createdAt']) &&
+        (!request.resource.data.keys().hasAny(['addr']) || (request.resource.data.addr is string && request.resource.data.addr.size() <= 140)) &&
+        (!request.resource.data.keys().hasAny(['cos']) || (request.resource.data.cos is list && request.resource.data.cos.size() <= 20)) &&
         request.resource.data.email is string && request.resource.data.email.size() <= 80 &&
         request.resource.data.name is string && request.resource.data.name.size() <= 80 &&
         request.resource.data.phone is string && request.resource.data.phone.size() <= 20;
@@ -133,6 +135,17 @@ service cloud.firestore {
       }
       match /appts/{d} {
         allow read, write: if dono(cid) || perm(cid, 'agenda');
+      }
+      // Pedidos de vínculo: o cliente logado avisa a empresa; a empresa vincula ao cadastro
+      match /links/{luid} {
+        allow create, update: if logado() && request.auth.uid == luid &&
+          request.resource.data.keys().hasOnly(['email','name','phone','ev','at']) &&
+          request.resource.data.email is string && request.resource.data.email.size() <= 80 &&
+          request.resource.data.email.lower() == request.auth.token.email.lower() &&
+          request.resource.data.name is string && request.resource.data.name.size() <= 80 &&
+          request.resource.data.phone is string && request.resource.data.phone.size() <= 20 &&
+          request.resource.data.ev == request.auth.token.email_verified;
+        allow read, delete: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
       }
       match /requests/{d} {
         allow read, update, delete: if dono(cid) || perm(cid, 'agenda');
