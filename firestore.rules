@@ -43,7 +43,8 @@ service cloud.firestore {
     match /customers/{uid} {
       allow read: if logado() && request.auth.uid == uid;
       allow create, update: if logado() && request.auth.uid == uid &&
-        request.resource.data.keys().hasOnly(['email','name','phone','addr','cos','createdAt']) &&
+        request.resource.data.keys().hasOnly(['email','name','phone','addr','cos','photo','createdAt']) &&
+        (!request.resource.data.keys().hasAny(['photo']) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 70000)) &&
         (!request.resource.data.keys().hasAny(['addr']) || (request.resource.data.addr is string && request.resource.data.addr.size() <= 140)) &&
         (!request.resource.data.keys().hasAny(['cos']) || (request.resource.data.cos is list && request.resource.data.cos.size() <= 20)) &&
         request.resource.data.email is string && request.resource.data.email.size() <= 80 &&
