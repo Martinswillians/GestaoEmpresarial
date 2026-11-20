@@ -157,6 +157,20 @@ service cloud.firestore {
       match /{sub}/{d} {
         allow read: if admin() && sub in ['employees','clients','services','appts','requests','teams'];
       }
+      // histórico de log: só a empresa e o administrador leem; ninguém altera nem apaga
+      match /logs/{lid} {
+        allow read: if dono(cid) || admin();
+        allow create: if (dono(cid) || equipe(cid) || admin()) &&
+          request.resource.data.uid == request.auth.uid &&
+          request.resource.data.ts == request.time &&
+          request.resource.data.keys().hasOnly(['ts','uid','who','role','act','ent','label','info']);
+        allow update, delete: if false;
+      }
+      // agenda do funcionário (cópia sem valores), uma pasta por funcionário
+      match /myagenda/{eid}/items/{d} {
+        allow read: if dono(cid) || perm(cid, 'agenda') || (equipe(cid) && conv().get('emp', '') == eid);
+        allow write: if dono(cid) || perm(cid, 'agenda');
+      }
       match /appts/{d} {
         allow read, write: if dono(cid) || perm(cid, 'agenda');
       }
