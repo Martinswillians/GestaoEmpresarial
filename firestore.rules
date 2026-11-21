@@ -190,9 +190,10 @@ service cloud.firestore {
         allow create: if dono(cid) || perm(cid, 'agenda') || reqOk(cid);
       }
       match /clients/{d} {
-        allow read: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
+        allow read: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda') || perm(cid, 'cview') || perm(cid, 'cedit');
         allow create: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
-        allow update, delete: if dono(cid) || perm(cid, 'clients');
+        allow update: if dono(cid) || perm(cid, 'clients') || perm(cid, 'cedit');
+        allow delete: if dono(cid) || perm(cid, 'clients');
       }
       match /employees/{d} {
         allow read: if dono(cid) || perm(cid, 'employees') || perm(cid, 'agenda');
