@@ -64,7 +64,7 @@ service cloud.firestore {
       match /appts/{aid} {
         allow read: if logado() && request.auth.uid == uid;
         allow create, update: if (dono(request.resource.data.company) || perm(request.resource.data.company, 'agenda')) &&
-          request.resource.data.keys().hasOnly(['company','companyName','svcName','date','time','dur','status','team','addr']);
+          request.resource.data.keys().hasOnly(['company','companyName','svcName','date','time','dur','status','team','addr','extras']);
         allow delete: if dono(resource.data.company) || perm(resource.data.company, 'agenda');
       }
     }
@@ -170,9 +170,16 @@ service cloud.firestore {
       match /myagenda/{eid}/items/{d} {
         allow read: if dono(cid) || perm(cid, 'agenda') || (equipe(cid) && conv().get('emp', '') == eid);
         allow write: if dono(cid) || perm(cid, 'agenda');
+        allow update: if equipe(cid) && conv().get('emp', '') == eid && conv().perms.get('addon', false) == true &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['extras']);
       }
       match /appts/{d} {
-        allow read, write: if dono(cid) || perm(cid, 'agenda');
+        allow read: if dono(cid) || perm(cid, 'agenda') || perm(cid, 'addon');
+        allow write: if dono(cid) || perm(cid, 'agenda');
+        // adicionais de serviço: quem tem a permissão (e o funcionário escalado) altera só o campo extras
+        allow update: if perm(cid, 'addon') &&
+          request.resource.data.diff(resource.data).affectedKeys().hasOnly(['extras']) &&
+          (conv().get('emp', '') == '' || conv().get('emp', '') in resource.data.get('emps', []));
       }
       // Pedidos de vínculo: o cliente logado avisa a empresa; a empresa vincula ao cadastro
       match /links/{luid} {
@@ -190,7 +197,7 @@ service cloud.firestore {
         allow create: if dono(cid) || perm(cid, 'agenda') || reqOk(cid);
       }
       match /clients/{d} {
-        allow read: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda') || perm(cid, 'cview') || perm(cid, 'cedit');
+        allow read: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda') || perm(cid, 'cview') || perm(cid, 'cedit') || perm(cid, 'addon');
         allow create: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
         allow update: if dono(cid) || perm(cid, 'clients') || perm(cid, 'cedit');
         allow delete: if dono(cid) || perm(cid, 'clients');
@@ -204,7 +211,7 @@ service cloud.firestore {
         allow write: if dono(cid) || perm(cid, 'employees');
       }
       match /services/{d} {
-        allow read: if dono(cid) || perm(cid, 'services') || perm(cid, 'agenda');
+        allow read: if dono(cid) || perm(cid, 'services') || perm(cid, 'agenda') || perm(cid, 'addon');
         allow write: if dono(cid) || perm(cid, 'services');
       }
       match /tx/{d} {
