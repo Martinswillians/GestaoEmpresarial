@@ -184,12 +184,13 @@ service cloud.firestore {
       // Pedidos de vínculo: o cliente logado avisa a empresa; a empresa vincula ao cadastro
       match /links/{luid} {
         allow create, update: if logado() && request.auth.uid == luid &&
-          request.resource.data.keys().hasOnly(['email','name','phone','ev','at']) &&
+          request.resource.data.keys().hasOnly(['email','name','phone','ev','at','photo']) &&
           request.resource.data.email is string && request.resource.data.email.size() <= 80 &&
           request.resource.data.email.lower() == request.auth.token.email.lower() &&
           request.resource.data.name is string && request.resource.data.name.size() <= 80 &&
           request.resource.data.phone is string && request.resource.data.phone.size() <= 20 &&
-          request.resource.data.ev == request.auth.token.email_verified;
+          request.resource.data.ev == request.auth.token.email_verified &&
+          (!('photo' in request.resource.data) || (request.resource.data.photo is string && request.resource.data.photo.size() <= 150000));
         allow read, delete: if dono(cid) || perm(cid, 'clients') || perm(cid, 'agenda');
       }
       match /requests/{d} {
